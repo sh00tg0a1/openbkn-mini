@@ -1,0 +1,108 @@
+server:
+  runMode: release
+  httpPort: 13014
+  language: zh-CN
+  readTimeOut: 600
+  writeTimeOut: 600
+log:
+  logLevel: info
+  developMode: false
+  maxAge: 100
+  maxBackups: 20
+  maxSize: 100
+# OTel Collector 配置
+otel:
+  # 服务名称
+  service_name: "vega-backend"
+  # 运行环境
+  environment: "production"
+  # OTLP 上报端点
+  otlp_endpoint: "otelcol-contrib:4318"
+
+  # Trace 配置
+  trace:
+    enabled: false
+    # 采样率: 0.0 - 1.0
+    sampling_rate: 1.0
+
+  # Log 配置
+  log:
+    enabled: false
+    # 日志级别: debug, info, warn, error
+    level: "info"
+crypto:
+  enabled: false
+  privateKeyPath: /opt/vega-backend/secret-config/rsa_private_key_pkcs8.pem
+  publicKeyPath: /opt/vega-backend/secret-config/rsa_public_key.pem
+
+depServices:
+  class-443:
+    ingressClass: class-443
+  rds:
+    host: 127.0.0.1
+    port: 3306
+    user: root
+    password: mini
+    type: MariaDB
+  mq:
+    mqType: nsq
+    mqHost: 127.0.0.1
+    mqPort: 4151
+    protocol: sasl_plaintext
+    tenant: default
+    auth:
+      username: admin
+      password: mini
+      mechanism: PLAIN
+  opensearch:
+    host: 127.0.0.1
+    port: 9200
+    protocol: http
+    user: admin
+    password: mini
+  hydra-admin:
+    host: 127.0.0.1
+    port: 4445
+    protocol: http
+  kafka-connect:
+    host: 127.0.0.1
+    port: 8083
+    protocol: http
+  mf-model-manager:
+    host: 127.0.0.1
+    port: 9898
+    protocol: http
+  mf-model-api:
+    host: 127.0.0.1
+    port: 9898
+    protocol: http
+  bkn-agent:
+    host: 127.0.0.1
+    port: 9898
+    protocol: http
+
+rateLimiting:
+  concurrency:
+    enabled: false
+    global:
+      max_concurrent_queries: 10
+
+query:
+  # 进程内 cursor session 的全局上限；达到上限时拒绝新的 cursor 请求。
+  cursorMaxSessions: 1000
+  # 单账号的进程内 cursor session 上限；未配置时默认 100。若不低于全局上限，自动限制为全局上限减一（全局上限为 1 时除外）。
+  cursorMaxSessionsPerAccount: 100
+
+indexCleanup:
+  workerEnabled: true
+  interval: 1h
+  protectionPeriod: 24h
+  maxDeletesPerRun: 100
+  dryRun: true
+
+taskWorker:
+  # Local worker counts for the single-instance database task loops.
+  semanticWorkerCount: 1
+  discoverWorkerCount: 1
+  batchWorkerCount: 1
+  streamingWorkerCount: 1

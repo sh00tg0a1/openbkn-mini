@@ -1,0 +1,30 @@
+server:
+  runMode: release
+  httpPort: 13018
+  language: zh-CN
+  readTimeOut: 120
+  writeTimeOut: 120
+  viewDataTimeout: 5m
+  defaultSmallModelEnabled: false
+  filteredCrossJoinMaxEdgeExpand: 10000
+log: {logLevel: info, developMode: false, maxAge: 7, maxBackups: 3, maxSize: 50}
+otel:
+  service_name: "openbkn-mini"
+  environment: "mini"
+  otlp_endpoint: "127.0.0.1:4318"
+  trace: {enabled: false, sampling_rate: 1.0}
+  log: {enabled: false, level: "info"}
+depServices:
+  class-443: {ingressClass: class-443}
+  rds: {host: 127.0.0.1, port: 3306, user: root, password: mini, type: MariaDB}
+  opensearch: {host: 127.0.0.1, port: 9200, protocol: http, user: admin, password: ""}
+  authorization-private: {host: 127.0.0.1, port: 3000, protocol: http}
+  user-management: {host: 127.0.0.1, port: 3000, protocol: http}
+  hydra-public: {host: 127.0.0.1, port: 4444, protocol: http}
+  hydra-admin: {host: 127.0.0.1, port: 4445, protocol: http}
+  model-factory: {host: 127.0.0.1, port: 9898, protocol: http}
+  vega-backend: {host: 127.0.0.1, port: 13014, protocol: http}
+  bkn-backend: {host: 127.0.0.1, port: 13015, protocol: http}
+  agent-operator-integration: {host: 127.0.0.1, port: 9000, protocol: http}
+  mf-model-manager: {host: 127.0.0.1, port: 9898, protocol: http}
+  mf-model-api: {host: 127.0.0.1, port: 9898, protocol: http}

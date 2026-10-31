@@ -1,0 +1,10 @@
+service_name: "openbkn-mini"
+service_version: "spike"
+environment: "mini"
+otlp_endpoint: "127.0.0.1:4318"
+trace:
+  enabled: false
+  sampling_rate: 1.0
+log:
+  enabled: false
+  level: "info"

@@ -1,0 +1,32 @@
+server:
+  runMode: release
+  httpPort: 13015
+  language: zh-CN
+  readTimeOut: 600
+  writeTimeOut: 600
+  defaultSmallModelName: ""
+  defaultSmallModelEnabled: false
+  proxySyncWorkerEnabled: true
+  proxySyncWorkerCount: 1
+  proxySyncPollInterval: 1
+  proxySyncLeaseSeconds: 60
+  proxySyncMaxAttempts: 12
+  proxyOutboxCleanupInterval: 3600
+log: {logLevel: info, developMode: false, maxAge: 7, maxBackups: 3, maxSize: 50}
+otel:
+  service_name: "openbkn-mini"
+  environment: "mini"
+  otlp_endpoint: "127.0.0.1:4318"
+  trace: {enabled: false, sampling_rate: 1.0}
+  log: {enabled: false, level: "info"}
+depServices:
+  class-443: {ingressClass: class-443}
+  rds: {host: 127.0.0.1, port: 3306, user: root, password: mini, type: MariaDB}
+  mq: {mqType: nsq, mqHost: 127.0.0.1, mqPort: 4151, protocol: http, tenant: default, auth: {username: "", password: "", mechanism: PLAIN}}
+  opensearch: {host: 127.0.0.1, port: 9200, protocol: http, user: admin, password: ""}
+  hydra-admin: {host: 127.0.0.1, port: 4445, protocol: http}
+  mf-model-manager: {host: 127.0.0.1, port: 9898, protocol: http}
+  mf-model-api: {host: 127.0.0.1, port: 9898, protocol: http}
+  ontology-query: {host: 127.0.0.1, port: 13018, protocol: http}
+  vega-backend: {host: 127.0.0.1, port: 13014, protocol: http}
+  agent-operator-integration: {host: 127.0.0.1, port: 9000, protocol: http}
