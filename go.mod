@@ -6,7 +6,6 @@ require (
 	github.com/openbkn-ai/bkn-foundry/adp/bkn/bkn-backend/server v0.0.0
 	github.com/openbkn-ai/bkn-foundry/adp/bkn/ontology-query/server v0.0.0
 	github.com/openbkn-ai/bkn-foundry/adp/context-loader/agent-retrieval v0.0.0
-	github.com/openbkn-ai/bkn-foundry/comm-go v0.1.9-0.20261023161855-b058d07fefc2
 	github.com/openbkn-ai/bkn-foundry/vega/vega-backend/server v0.0.0
 )
 
@@ -72,6 +71,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/nsqio/go-nsq v1.1.0 // indirect
+	github.com/openbkn-ai/bkn-foundry/comm-go v0.1.9-0.20261102015423-8e29f3f0c9a8 // indirect
 	github.com/openbkn-ai/licverify v0.5.1 // indirect
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect

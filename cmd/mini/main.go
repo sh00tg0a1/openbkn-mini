@@ -16,7 +16,6 @@ import (
 
 	"github.com/sh00tg0a1/openbkn-mini/internal/fakes"
 	"github.com/sh00tg0a1/openbkn-mini/internal/gateway"
-	"github.com/sh00tg0a1/openbkn-mini/internal/unfreeze"
 )
 
 func main() {
@@ -76,19 +75,10 @@ func main() {
 	os.Exit(0)
 }
 
-// start runs one service in a goroutine and waits until it has frozen the
-// entitlement registry and is listening, then clears the flag for the next one.
+// start runs one service in a goroutine and waits until it is listening.
 func start(name string, run func(), addr string) {
-	unfreeze.Clear()
 	go run()
-	deadline := time.Now().Add(2 * time.Minute)
-	for !unfreeze.Frozen() {
-		if time.Now().After(deadline) {
-			fail(name + ": did not freeze in time")
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	waitListening(name, addr, time.Until(deadline))
+	waitListening(name, addr, 2*time.Minute)
 	logf("%s listening on %s", name, addr)
 }
 
