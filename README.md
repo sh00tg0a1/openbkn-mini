@@ -3,12 +3,17 @@
 [中文](README.zh.md)
 
 OpenBKN for a developer's machine: modeling, data access (Vega), queries including Cypher, search
-(Context Loader MCP) and the execution factory (API / MCP / Skill). Sign-in and permissions,
-metrics, Trace, function execution and BKN Agent are not included.
+(Context Loader MCP), actions, and the execution factory (API / MCP / Skill / Function). Sign-in
+and permissions, metrics, Trace and BKN Agent are not included.
 
-The five platform Go services, stand-ins for the services mini does not run, the gateway, the
-studio pages and Redis run in one container and one process. The other two containers are MariaDB
-and OpenSearch.
+One container runs the five platform Go services, stand-ins for the services mini does not run,
+the gateway and the studio pages in one process, next to Redis and the platform's function
+executor. The other two containers are MariaDB and OpenSearch.
+
+Functions and Skill scripts run in the platform's own executor, but without the community
+edition's per-session containers: they share one Python environment in the mini container and are
+not isolated from it. The image is built on the platform's sandbox template image, so it is large
+(about 1.7 GB).
 
 ## Start
 
@@ -45,7 +50,7 @@ knowledge network concepts.
 |---|---|
 | `cmd/mini` | Entry point: stand-ins, then the five services, then the gateway |
 | `internal/gateway` | The single entry on port 8000: routes to the services, serves studio, writes config.js |
-| `internal/fakes` | Stand-ins: bkn-safe, Hydra, model factory, Trace, sandbox, OSS, NSQ |
+| `internal/fakes` | Stand-ins: bkn-safe, Hydra, model factory, Trace, the sandbox control plane (in front of the function executor), OSS, NSQ |
 | `internal/forward` | In the container, relays the 127.0.0.1 database and OpenSearch ports to the compose services |
 | `docker/` | Image, entry script and the migration tool's connection settings |
 | `dev/` | For running mini directly on the host: a compose file for its dependencies and the run directory (configs) |

@@ -1,14 +1,18 @@
 # syntax=docker/dockerfile:1
-# openbkn mini: the platform Go services, their stand-ins, the gateway, studio
-# and Redis in one image. Build contexts (see compose.yaml):
+# openbkn mini: the platform Go services, their stand-ins, the gateway, studio,
+# Redis and the official function executor in one image. Build contexts (see
+# compose.yaml):
 #   .        this repository
 #   foundry  a bkn-foundry checkout (go.mod points at ../bkn-foundry-wt-mini)
 #   studio   a bkn-studio checkout
 
 ARG GO_IMAGE=golang:1.26.9
 ARG NODE_IMAGE=node:22-alpine
-# Redis comes from its official image, which is also the runtime base.
-ARG RUNTIME_IMAGE=redis:7
+# The runtime base is the platform's sandbox template image: Python 3.11, the
+# official function executor, the BKN SDKs and the common data packages. Pick
+# the tag built from the foundry commit mini pins (or the latest before it).
+ARG RUNTIME_IMAGE=ghcr.io/openbkn-ai/sandbox-template-python-basic:0.2.1-main.20261101145631.shad3e6fca
+ARG REDIS_IMAGE=redis:7
 
 ############################## studio ##############################
 FROM ${NODE_IMAGE} AS studio-build
@@ -30,28 +34,34 @@ RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY cmd ./cmd
 COPY internal ./internal
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /out/mini ./cmd/mini
+    CGO_ENABLED=0 go build -trimpath -tags timetzdata -ldflags "-s -w" -o /out/mini ./cmd/mini
 
 ############################# runtime ##############################
+FROM ${REDIS_IMAGE} AS redis
+
 FROM ${RUNTIME_IMAGE}
-# CA roots for calling model providers over HTTPS.
-COPY --from=go-build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY --from=go-build /out/mini /app/bin/mini
-COPY --from=studio-build /studio/dist /app/studio
-COPY dev/run/config /app/run/config
-COPY dev/run/profile /app/run/profile
-COPY dev/run/authorization-registry.json /app/run/authorization-registry.json
-COPY dev/run/models.example.json /app/models.example.json
-COPY docker/entrypoint.sh /app/bin/entrypoint.sh
-WORKDIR /app/run
+USER root
+COPY --from=redis /usr/local/bin/redis-server /usr/local/bin/redis-server
+COPY --from=go-build /out/mini /opt/mini/bin/mini
+COPY --from=studio-build /studio/dist /opt/mini/studio
+COPY dev/run/config /opt/mini/run/config
+COPY dev/run/profile /opt/mini/run/profile
+COPY dev/run/authorization-registry.json /opt/mini/run/authorization-registry.json
+COPY dev/run/models.example.json /opt/mini/models.example.json
+COPY docker/entrypoint.sh /opt/mini/bin/entrypoint.sh
+WORKDIR /opt/mini/run
 ENV TZ=Asia/Shanghai \
     MINI_GATEWAY_ADDR=0.0.0.0:8000 \
     MINI_PUBLIC_URL=http://127.0.0.1:8000 \
-    MINI_STUDIO_DIR=/app/studio \
+    MINI_STUDIO_DIR=/opt/mini/studio \
     MINI_OSS_DIR=/data/oss \
     MINI_MODELS_FILE=/data/models.json \
-    MINI_FORWARD=127.0.0.1:3306=mariadb:3306,127.0.0.1:9200=opensearch:9200
+    MINI_FORWARD=127.0.0.1:3306=mariadb:3306,127.0.0.1:9200=opensearch:9200 \
+    MINI_EXECUTOR_URL=http://127.0.0.1:8080 \
+    WORKSPACE_PATH=/workspace
 EXPOSE 8000
 VOLUME /data
-ENTRYPOINT ["/app/bin/entrypoint.sh"]
+HEALTHCHECK --interval=10s --timeout=3s --start-period=60s --retries=3 \
+    CMD curl -fs http://127.0.0.1:8000/studio/ >/dev/null || exit 1
+ENTRYPOINT ["/opt/mini/bin/entrypoint.sh"]
 CMD []

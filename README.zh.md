@@ -3,10 +3,13 @@
 [English](README.md)
 
 开发者本机用的 OpenBKN：建模、数据接入（Vega）、查询（含 Cypher）、检索（Context Loader MCP）、
-执行工厂（API / MCP / Skill）。不含登录与权限、指标、Trace、函数执行、BKN Agent。
+行动、执行工厂（API / MCP / Skill / 函数）。不含登录与权限、指标、Trace、BKN Agent。
 
-平台的 5 个 Go 服务、mini 不运行的那些服务的替身、网关、studio 页面和 Redis 跑在一个容器、一个进程里；
-另外两个容器是 MariaDB 和 OpenSearch。
+一个容器里，平台的 5 个 Go 服务、mini 不运行的那些服务的替身、网关和 studio 页面跑在同一个进程里，
+旁边是 Redis 和平台的函数执行器；另外两个容器是 MariaDB 和 OpenSearch。
+
+函数和 Skill 脚本由平台自己的执行器运行，但没有社区版那样每个会话一个容器：它们共用 mini 容器里的
+一个 Python 环境，和容器之间没有隔离。镜像以平台的沙箱模板镜像为底座，所以比较大（约 1.7 GB）。
 
 ## 启动
 
@@ -41,7 +44,7 @@ docker compose restart mini
 |---|---|
 | `cmd/mini` | 入口：依次启动替身、5 个服务、网关 |
 | `internal/gateway` | 统一入口 8000：转发到各服务，托管 studio，生成 config.js |
-| `internal/fakes` | 替身：bkn-safe、Hydra、模型工厂、Trace、沙箱、OSS、NSQ |
+| `internal/fakes` | 替身：bkn-safe、Hydra、模型工厂、Trace、沙箱控制面（后面接函数执行器）、OSS、NSQ |
 | `internal/forward` | 容器里把 127.0.0.1 上的数据库、OpenSearch 端口转到 compose 服务 |
 | `docker/` | 镜像、启动脚本、迁移工具的连接配置 |
 | `dev/` | 在本机直接跑 mini 用：依赖服务的 compose 文件和运行目录（配置） |

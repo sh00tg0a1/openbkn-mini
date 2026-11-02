@@ -60,6 +60,9 @@ services:
       opensearch: {condition: service_healthy}
       migrate: {condition: service_completed_successfully}
     ports: ["127.0.0.1:8000:8000"]
+    # The execution factory calls Function tools at this fixed address.
+    extra_hosts: ["agent-operator-integration:127.0.0.1"]
+    init: true
     env_file:
       - path: ./data/.env
         required: false

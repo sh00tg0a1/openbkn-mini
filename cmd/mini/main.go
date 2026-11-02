@@ -67,6 +67,10 @@ func main() {
 			Insecure: os.Getenv("MINI_MODEL_UPSTREAM_INSECURE") == "1",
 		},
 		DirectModels: directModels,
+		Sandbox: fakes.SandboxConfig{
+			ExecutorURL: os.Getenv("MINI_EXECUTOR_URL"),
+			Workspace:   env("WORKSPACE_PATH", "./workspace"),
+		},
 		RegistryFile: env("MINI_AUTHZ_REGISTRY", "./authorization-registry.json"),
 	}), "start fakes")
 	for _, addr := range []string{"127.0.0.1:3000", "127.0.0.1:4445", "127.0.0.1:9898", "127.0.0.1:4151", "127.0.0.1:8081", "127.0.0.1:8090", "127.0.0.1:8095"} {

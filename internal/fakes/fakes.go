@@ -29,6 +29,7 @@ type Config struct {
 	NSQAddr      string        // nsqd HTTP publish
 	TraceAddr    string        // BKN Trace core
 	SandboxAddr  string        // sandbox control plane
+	Sandbox      SandboxConfig // the function executor behind it
 	OSSAddr      string        // oss-gateway-backend
 	OSSDir       string        // where the OSS fake keeps files
 	PublicURL    string        // how clients reach mini (the gateway), for OSS download links
@@ -49,7 +50,7 @@ func Start(cfg Config) error {
 		cfg.ModelAddr:   logged("model", newModel(cfg.Models, cfg.DirectModels)),
 		cfg.NSQAddr:     logged("nsq", newNSQ()),
 		cfg.TraceAddr:   logged("trace", newTrace()),
-		cfg.SandboxAddr: logged("sandbox", newSandbox()),
+		cfg.SandboxAddr: logged("sandbox", newSandbox(cfg.Sandbox)),
 		cfg.OSSAddr:     logged("oss", newOSS(cfg.OSSDir, cfg.PublicURL)),
 	}
 	for addr, h := range servers {
