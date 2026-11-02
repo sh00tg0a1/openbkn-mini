@@ -66,8 +66,10 @@ func Start(addr string, routes []Route) {
 		fmt.Fprintln(w, `window.__BKN_STUDIO_RUNTIME__ = {
   mode: "hosted",
   // Services mini does not run: BKN project, Trace, BKN Agent, function tools,
-  // object metrics; and the graph explorer upgrade entry (enterprise only).
-  hiddenNavigation: ["bkn-project", "observability", "experience-agent", "functions", "metrics", "graph_explorer"],
+  // object metrics; the graph explorer upgrade entry (enterprise only); and the
+  // user menu entries for licences, accounts and sign-out (there is no login).
+  hiddenNavigation: ["bkn-project", "observability", "experience-agent", "functions", "metrics", "graph_explorer",
+    "subscription", "account", "logout"],
   features: { executionFactoryLab: { function: false } },
   currentUser: {
     id: "266c6a42-6131-4d62-8f39-853e7093701c",
