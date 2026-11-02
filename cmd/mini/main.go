@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"regexp"
@@ -24,6 +25,10 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		os.Exit(healthcheck())
+	}
+
 	// Process-wide settings the platform services read from the environment.
 	defaults := map[string]string{
 		"BKN_SAFE_URL":                         "http://127.0.0.1:3000",
@@ -95,7 +100,9 @@ func main() {
 	start("execution-factory", func() { must(ef.Run(), "execution-factory run") }, env("MINI_EF_ADDR", "127.0.0.1:9000"))
 
 	gwAddr := env("MINI_GATEWAY_ADDR", "127.0.0.1:8000")
-	gateway.Start(gwAddr, gateway.DefaultRoutes())
+	sandbox := os.Getenv("MINI_EXECUTOR_URL") != ""
+	logf("function executor: %v", sandbox)
+	gateway.Start(gwAddr, gateway.DefaultRoutes(), gateway.Options{Sandbox: sandbox})
 	waitListening("gateway", gwAddr, 10*time.Second)
 	logf("all services started; open %s", env("MINI_PUBLIC_URL", "http://127.0.0.1:8000"))
 
@@ -107,6 +114,27 @@ func main() {
 	logf("shutting down")
 	time.Sleep(3 * time.Second)
 	os.Exit(0)
+}
+
+// healthcheck is the container's health probe: the gateway serves studio.
+func healthcheck() int {
+	_, port, err := net.SplitHostPort(env("MINI_GATEWAY_ADDR", "127.0.0.1:8000"))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	client := http.Client{Timeout: 3 * time.Second}
+	resp, err := client.Get("http://127.0.0.1:" + port + "/studio/")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		fmt.Fprintln(os.Stderr, resp.Status)
+		return 1
+	}
+	return 0
 }
 
 // loadModels reads the models file if there is one. Without it mini runs

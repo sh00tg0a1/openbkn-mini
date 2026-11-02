@@ -5,13 +5,17 @@
 #   .        this repository
 #   foundry  a bkn-foundry checkout (go.mod points at ../bkn-foundry-wt-mini)
 #   studio   a bkn-studio checkout
+# MINI_SANDBOX=off builds a much smaller image without the function executor;
+# Function and Skill code then does not run.
 
+ARG MINI_SANDBOX=on
 ARG GO_IMAGE=golang:1.26.9
 ARG NODE_IMAGE=node:22-alpine
-# The runtime base is the platform's sandbox template image: Python 3.11, the
-# official function executor, the BKN SDKs and the common data packages. Pick
-# the tag built from the foundry commit mini pins (or the latest before it).
-ARG RUNTIME_IMAGE=ghcr.io/openbkn-ai/sandbox-template-python-basic:0.2.1-main.20261101145631.shad3e6fca
+# The sandbox runtime base is the platform's sandbox template image: Python
+# 3.11, the official function executor, the BKN SDKs and the common data
+# packages. Pick the tag built from the foundry commit mini pins (or the latest
+# before it).
+ARG SANDBOX_IMAGE=ghcr.io/openbkn-ai/sandbox-template-python-basic:0.2.1-main.20261101145631.shad3e6fca
 ARG REDIS_IMAGE=redis:7
 
 ############################## studio ##############################
@@ -39,7 +43,13 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 ############################# runtime ##############################
 FROM ${REDIS_IMAGE} AS redis
 
-FROM ${RUNTIME_IMAGE}
+FROM ${SANDBOX_IMAGE} AS runtime-on
+
+# Redis's own image (Debian slim), plus CA roots for calling model providers.
+FROM redis AS runtime-off
+COPY --from=go-build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
+FROM runtime-${MINI_SANDBOX}
 USER root
 COPY --from=redis /usr/local/bin/redis-server /usr/local/bin/redis-server
 COPY --from=go-build /out/mini /opt/mini/bin/mini
@@ -62,6 +72,6 @@ ENV TZ=Asia/Shanghai \
 EXPOSE 8000
 VOLUME /data
 HEALTHCHECK --interval=10s --timeout=3s --start-period=60s --retries=3 \
-    CMD curl -fs http://127.0.0.1:8000/studio/ >/dev/null || exit 1
+    CMD ["/opt/mini/bin/mini", "healthcheck"]
 ENTRYPOINT ["/opt/mini/bin/entrypoint.sh"]
 CMD []

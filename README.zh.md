@@ -10,6 +10,7 @@
 
 函数和 Skill 脚本由平台自己的执行器运行，但没有社区版那样每个会话一个容器：它们共用 mini 容器里的
 一个 Python 环境，和容器之间没有隔离。镜像以平台的沙箱模板镜像为底座，所以比较大（约 1.7 GB）。
+用不到函数和 Skill 脚本的话，可以不装沙箱，见下文。
 
 ## 启动
 
@@ -22,6 +23,16 @@ open http://127.0.0.1:8000/studio/   # 免登录，以 admin 进入
 
 构建需要旁边有 foundry 和 studio 的源码目录，默认 `../bkn-foundry-wt-mini`、`../bkn-studio-wt-mini`
 （都是各自 `main` 的固定提交），可以用环境变量 `MINI_FOUNDRY_DIR`、`MINI_STUDIO_SRC` 换。
+
+## 不装沙箱（可选）
+
+```bash
+echo 'MINI_SANDBOX=off' >> .env      # 和 compose.yaml 同目录的 .env，不是 data/.env
+docker compose up -d --build
+```
+
+镜像不带函数执行器，小很多（约 310 MB）。函数和 Skill 脚本不运行（调试和调用都会失败），
+页面上的函数入口和沙箱运行时管理也随之隐藏；其余功能不受影响。删掉这一行再 `up -d --build` 就装回来。
 
 ## 配模型（可选）
 

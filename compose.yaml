@@ -52,6 +52,10 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
+      # off: no function executor, a much smaller image (Function and Skill
+      # code does not run). Set it in .env next to this file or on the command line.
+      args:
+        MINI_SANDBOX: ${MINI_SANDBOX:-on}
       additional_contexts:
         foundry: ${MINI_FOUNDRY_DIR:-../bkn-foundry-wt-mini}
         studio: ${MINI_STUDIO_SRC:-../bkn-studio-wt-mini}

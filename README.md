@@ -13,7 +13,7 @@ executor. The other two containers are MariaDB and OpenSearch.
 Functions and Skill scripts run in the platform's own executor, but without the community
 edition's per-session containers: they share one Python environment in the mini container and are
 not isolated from it. The image is built on the platform's sandbox template image, so it is large
-(about 1.7 GB).
+(about 1.7 GB). If you do not need Functions or Skill scripts, leave the sandbox out (below).
 
 ## Start
 
@@ -27,6 +27,18 @@ Use `127.0.0.1`, not `localhost`: a studio dev server on port 8000 answers on `l
 The build needs foundry and studio checkouts next to this repository, by default
 `../bkn-foundry-wt-mini` and `../bkn-studio-wt-mini` (pinned commits of their `main`). Set
 `MINI_FOUNDRY_DIR` and `MINI_STUDIO_SRC` to use others.
+
+## Without the sandbox (optional)
+
+```bash
+echo 'MINI_SANDBOX=off' >> .env      # the .env next to compose.yaml, not data/.env
+docker compose up -d --build
+```
+
+The image then has no function executor and is much smaller (about 310 MB). Functions and Skill
+scripts do not run (debugging and calls fail), and studio hides the function entries and the
+sandbox runtime page; everything else works as before. Remove the line and run
+`up -d --build` again to bring the sandbox back.
 
 ## Models (optional)
 
