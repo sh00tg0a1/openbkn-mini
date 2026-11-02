@@ -5,6 +5,10 @@
 开发者本机用的 OpenBKN：建模、数据接入（Vega）、查询（含 Cypher）、检索（Context Loader MCP）、
 行动、执行工厂（API / MCP / Skill / 函数）。不含登录与权限、指标、Trace、BKN Agent。
 
+平台本身来自 [OpenBKN](https://github.com/openbkn-ai)：后端服务是
+[bkn-foundry](https://github.com/openbkn-ai/bkn-foundry)，页面是
+[bkn-studio](https://github.com/openbkn-ai/bkn-studio)。mini 用它们的源码构建，不改其中的代码。
+
 一个容器里，平台的 5 个 Go 服务、mini 不运行的那些服务的替身、网关和 studio 页面跑在同一个进程里，
 旁边是 Redis 和平台的函数执行器；另外两个容器是 MariaDB 和 OpenSearch。
 
@@ -21,7 +25,8 @@ open http://127.0.0.1:8000/studio/   # 免登录，以 admin 进入
 
 地址要写 `127.0.0.1`，不要写 `localhost`：本机如果在 8000 端口开着 studio 开发服务器，`localhost` 会进到它那里。
 
-构建需要旁边有 foundry 和 studio 的源码目录，默认 `../bkn-foundry-wt-mini`、`../bkn-studio-wt-mini`
+构建需要旁边有 [bkn-foundry](https://github.com/openbkn-ai/bkn-foundry) 和
+[bkn-studio](https://github.com/openbkn-ai/bkn-studio) 的源码目录，默认 `../bkn-foundry-wt-mini`、`../bkn-studio-wt-mini`
 （都是各自 `main` 的固定提交），可以用环境变量 `MINI_FOUNDRY_DIR`、`MINI_STUDIO_SRC` 换。
 
 ## 不装沙箱（可选）

@@ -6,6 +6,11 @@ OpenBKN for a developer's machine: modeling, data access (Vega), queries includi
 (Context Loader MCP), actions, and the execution factory (API / MCP / Skill / Function). Sign-in
 and permissions, metrics, Trace and BKN Agent are not included.
 
+The platform itself is [OpenBKN](https://github.com/openbkn-ai): the backend services are
+[bkn-foundry](https://github.com/openbkn-ai/bkn-foundry) and the web pages are
+[bkn-studio](https://github.com/openbkn-ai/bkn-studio). mini builds them from source without
+changing their code.
+
 One container runs the five platform Go services, stand-ins for the services mini does not run,
 the gateway and the studio pages in one process, next to Redis and the platform's function
 executor. The other two containers are MariaDB and OpenSearch.
@@ -24,7 +29,8 @@ open http://127.0.0.1:8000/studio/   # no sign-in; you are admin
 
 Use `127.0.0.1`, not `localhost`: a studio dev server on port 8000 answers on `localhost`.
 
-The build needs foundry and studio checkouts next to this repository, by default
+The build needs [bkn-foundry](https://github.com/openbkn-ai/bkn-foundry) and
+[bkn-studio](https://github.com/openbkn-ai/bkn-studio) checkouts next to this repository, by default
 `../bkn-foundry-wt-mini` and `../bkn-studio-wt-mini` (pinned commits of their `main`). Set
 `MINI_FOUNDRY_DIR` and `MINI_STUDIO_SRC` to use others.
 
