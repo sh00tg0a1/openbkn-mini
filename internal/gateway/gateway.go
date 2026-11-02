@@ -80,17 +80,17 @@ func Start(addr string, routes []Route) {
       "knowledge-network:preview", "knowledge-network:concept-group:view",
       "catalog:view_detail", "catalog:create", "catalog:modify", "catalog:delete",
       "catalog:task_manage", "catalog:resource_manage", "resource:view_detail",
-      // Execution factory: API, MCP and Skill. No functions or sandbox runtime.
-      "execution-factory-lab:capability:view", "execution-factory-lab:capability:create",
-      "execution-factory-lab:capability:edit", "execution-factory-lab:capability:publish",
-      "execution-factory-lab:capability:delete", "execution-factory-lab:capability:debug",
-      "execution-factory-lab:mcp:create", "execution-factory-lab:mcp:edit",
-      "execution-factory-lab:mcp:publish", "execution-factory-lab:mcp:delete",
-      "execution-factory-lab:mcp:debug", "execution-factory-lab:skill:create",
-      "execution-factory-lab:skill:edit", "execution-factory-lab:skill:publish",
-      "execution-factory-lab:skill:delete", "execution-factory-lab:impex:export",
-      "execution-factory-lab:impex:import", "execution-factory-lab:catalog:view",
-      "execution-factory-lab:catalog:install"
+      // Execution factory: API tools, MCP and Skill. No functions.
+      "execution-factory:toolbox:view", "execution-factory:toolbox:create",
+      "execution-factory:toolbox:edit", "execution-factory:toolbox:publish",
+      "execution-factory:toolbox:delete", "execution-factory:toolbox:debug",
+      "execution-factory:tool:view", "execution-factory:tool:create",
+      "execution-factory:tool:edit", "execution-factory:tool:delete", "execution-factory:tool:debug",
+      "execution-factory:mcp:view", "execution-factory:mcp:create", "execution-factory:mcp:edit",
+      "execution-factory:mcp:publish", "execution-factory:mcp:delete", "execution-factory:mcp:debug",
+      "execution-factory:skill:view", "execution-factory:skill:create", "execution-factory:skill:edit",
+      "execution-factory:skill:publish", "execution-factory:skill:delete",
+      "execution-factory:impex:export", "execution-factory:impex:import"
     ]
   }
 };`)
