@@ -17,7 +17,7 @@ import (
 // ModelUpstream points the model stand-in at another OpenBKN platform whose
 // model factory serves the actual models. Empty BaseURL means "no models".
 type ModelUpstream struct {
-	BaseURL  string // e.g. https://10.211.55.4
+	BaseURL  string // e.g. https://openbkn.example.com
 	AppKey   string // bak_ key issued on that platform
 	Insecure bool   // skip TLS verification (self-signed dev platforms)
 }
