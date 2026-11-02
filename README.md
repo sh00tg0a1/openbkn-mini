@@ -1,43 +1,52 @@
 # openbkn mini
 
-开发者本机用的 OpenBKN：建模、数据接入（Vega）、查询（含 Cypher）、检索（Context Loader MCP）、
-执行工厂（API / MCP / Skill）。不含认证权限、指标、Trace、函数执行、BKN Agent。
+[中文](README.zh.md)
 
-平台的 5 个 Go 服务、各依赖服务的替身、网关、studio 页面和 Redis 跑在一个容器、一个进程里；
-另外两个容器是 MariaDB 和 OpenSearch。
+OpenBKN for a developer's machine: modeling, data access (Vega), queries including Cypher, search
+(Context Loader MCP) and the execution factory (API / MCP / Skill). Sign-in and permissions,
+metrics, Trace, function execution and BKN Agent are not included.
 
-## 启动
+The five platform Go services, stand-ins for the services mini does not run, the gateway, the
+studio pages and Redis run in one container and one process. The other two containers are MariaDB
+and OpenSearch.
+
+## Start
 
 ```bash
-docker compose up -d        # 第一次会构建镜像
-open http://127.0.0.1:8000  # 免登录，以 admin 进入
+docker compose up -d                 # the first run builds the image
+open http://127.0.0.1:8000/studio/   # no sign-in; you are admin
 ```
 
-构建需要旁边有 foundry 和 studio 的源码目录，默认 `../bkn-foundry-wt-mini`、`../bkn-studio-wt-mini`（都是官方 main 的固定提交），
-可以用环境变量 `MINI_FOUNDRY_DIR`、`MINI_STUDIO_SRC` 换。
+Use `127.0.0.1`, not `localhost`: a studio dev server on port 8000 answers on `localhost`.
 
-## 配模型（可选）
+The build needs foundry and studio checkouts next to this repository, by default
+`../bkn-foundry-wt-mini` and `../bkn-studio-wt-mini` (pinned commits of their `main`). Set
+`MINI_FOUNDRY_DIR` and `MINI_STUDIO_SRC` to use others.
 
-不配模型也能用，只是没有语义检索。要配的话：
+## Models (optional)
+
+mini works without models; only semantic search is missing. To add them:
 
 ```bash
-cp dev/run/models.example.json data/models.json   # 按需改服务商和模型
-echo 'DASHSCOPE_API_KEY=sk-...' > data/.env       # models.json 里 api_key_env 指向的变量
+cp dev/run/models.example.json data/models.json   # pick your provider and models
+echo 'DASHSCOPE_API_KEY=sk-...' > data/.env       # the variable named by api_key_env
 docker compose restart mini
 ```
 
-`models.json` 里每个模型：`name`、`type`（embedding / reranker / llm）、`url`（完整接口地址）、
-`api_key` 或 `api_key_env`、`api_model`（服务商侧名字，默认同 name）、embedding 必填 `embedding_dim`、
-百炼原生重排序加 `"format": "dashscope"`。配了 embedding 模型时，mini 会自动打开知识网络概念的向量化。
+Each entry in `models.json` has `name`, `type` (embedding / reranker / llm), `url` (the full
+endpoint), `api_key` or `api_key_env`, and `api_model` (the provider's name, defaults to `name`).
+Embedding models also need `embedding_dim`; DashScope's native rerank API needs
+`"format": "dashscope"`. With an embedding model configured, mini turns on embeddings for
+knowledge network concepts.
 
-## 目录
+## Layout
 
-| 路径 | 内容 |
+| Path | Contents |
 |---|---|
-| `cmd/mini` | 入口：替身 → 5 个服务 → 网关 |
-| `internal/gateway` | 统一入口 8000，转发各服务、托管 studio、生成 config.js |
-| `internal/fakes` | 替身：bkn-safe、Hydra、模型、Trace、沙箱、OSS、NSQ |
-| `internal/forward` | 容器里把 127.0.0.1 的数据库、OpenSearch 端口转到 compose 服务 |
-| `docker/` | 镜像、启动脚本、迁移工具连接配置 |
-| `dev/` | 本机直接跑 mini 用：依赖服务的 compose 和运行目录（配置） |
-| `data/` | 你自己的文件：models.json、.env、上传的文件（不进 git） |
+| `cmd/mini` | Entry point: stand-ins, then the five services, then the gateway |
+| `internal/gateway` | The single entry on port 8000: routes to the services, serves studio, writes config.js |
+| `internal/fakes` | Stand-ins: bkn-safe, Hydra, model factory, Trace, sandbox, OSS, NSQ |
+| `internal/forward` | In the container, relays the 127.0.0.1 database and OpenSearch ports to the compose services |
+| `docker/` | Image, entry script and the migration tool's connection settings |
+| `dev/` | For running mini directly on the host: a compose file for its dependencies and the run directory (configs) |
+| `data/` | Your files: models.json, .env and uploaded files (not in git) |
