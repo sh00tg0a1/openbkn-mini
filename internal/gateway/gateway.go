@@ -66,10 +66,8 @@ func Start(addr string, routes []Route) {
 		fmt.Fprintln(w, `window.__BKN_STUDIO_RUNTIME__ = {
   mode: "hosted",
   // Services mini does not run: BKN project, Trace, BKN Agent, function tools,
-  // object metrics; the graph explorer upgrade entry (enterprise only); and the
-  // user menu entries for licences, accounts and sign-out (there is no login).
-  hiddenNavigation: ["bkn-project", "observability", "experience-agent", "functions", "metrics", "graph_explorer",
-    "subscription", "account", "logout"],
+  // object metrics; and the graph explorer upgrade entry (enterprise only).
+  hiddenNavigation: ["bkn-project", "observability", "experience-agent", "functions", "metrics", "graph_explorer"],
   features: { executionFactoryLab: { function: false } },
   currentUser: {
     id: "266c6a42-6131-4d62-8f39-853e7093701c",
@@ -96,7 +94,19 @@ func Start(addr string, routes []Route) {
       "execution-factory:impex:export", "execution-factory:impex:import"
     ]
   }
-};`)
+};
+// There is no login in mini: leave the licence, account and sign-out entries
+// (and the divider above sign-out) out of the user menu.
+(function () {
+  var menu = ".ant-dropdown-menu:has(.console-user-menu-version) > ";
+  var hidden = ["subscription", "account", "logout"].map(function (key) {
+    return menu + 'li[data-menu-id$="-' + key + '"]';
+  });
+  hidden.push(menu + 'li.ant-dropdown-menu-item-divider:has(+ li[data-menu-id$="-logout"])');
+  var style = document.createElement("style");
+  style.textContent = hidden.join(",\n") + " { display: none !important; }";
+  document.head.appendChild(style);
+})();`)
 	}
 	mux.HandleFunc("/config.js", studioConfig)
 	mux.HandleFunc(studioBase+"config.js", studioConfig)
