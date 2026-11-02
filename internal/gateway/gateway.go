@@ -79,7 +79,18 @@ func Start(addr string, routes []Route) {
       "knowledge-network:delete", "knowledge-network:import", "knowledge-network:export",
       "knowledge-network:preview", "knowledge-network:concept-group:view",
       "catalog:view_detail", "catalog:create", "catalog:modify", "catalog:delete",
-      "catalog:task_manage", "catalog:resource_manage", "resource:view_detail"
+      "catalog:task_manage", "catalog:resource_manage", "resource:view_detail",
+      // Execution factory: API, MCP and Skill. No functions or sandbox runtime.
+      "execution-factory-lab:capability:view", "execution-factory-lab:capability:create",
+      "execution-factory-lab:capability:edit", "execution-factory-lab:capability:publish",
+      "execution-factory-lab:capability:delete", "execution-factory-lab:capability:debug",
+      "execution-factory-lab:mcp:create", "execution-factory-lab:mcp:edit",
+      "execution-factory-lab:mcp:publish", "execution-factory-lab:mcp:delete",
+      "execution-factory-lab:mcp:debug", "execution-factory-lab:skill:create",
+      "execution-factory-lab:skill:edit", "execution-factory-lab:skill:publish",
+      "execution-factory-lab:skill:delete", "execution-factory-lab:impex:export",
+      "execution-factory-lab:impex:import", "execution-factory-lab:catalog:view",
+      "execution-factory-lab:catalog:install"
     ]
   }
 };`)
