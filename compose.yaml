@@ -1,0 +1,70 @@
+# openbkn mini: docker compose up -d, then open http://127.0.0.1:8000
+#
+# ./data holds files you own: models.json (copy from dev/run/models.example.json)
+# and .env for the API keys it names. Database and search data live in volumes.
+name: openbkn-mini
+services:
+  mariadb:
+    image: mariadb:11.4.7
+    environment:
+      MARIADB_ROOT_PASSWORD: mini
+      MARIADB_DATABASE: openbkn
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--lower-case-table-names=1"]
+    volumes: [mariadb:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 30
+    restart: unless-stopped
+  opensearch:
+    image: ghcr.io/openbkn-ai/opensearch:2.19.4-main.20260818163046.shaaeb5d56
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    volumes: [opensearch:/usr/share/opensearch/data]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 5s
+      retries: 60
+    restart: unless-stopped
+  # Creates or upgrades the schemas of the services mini runs, then exits.
+  migrate:
+    image: ghcr.io/openbkn-ai/core-data-migrator:0.2.1-main.20261102103355.sha4ad79e6
+    depends_on:
+      mariadb: {condition: service_healthy}
+    volumes: ["./docker/migrator-secret.yaml:/etc/data-migrator/secret-config.yaml:ro"]
+    command:
+      - python3
+      - server/data-migrator.py
+      - migrate
+      - --config=/app/config.yaml
+      - --secret-config=/etc/data-migrator/secret-config.yaml
+      - --service
+      - bkn-backend
+      - bkn-backend-trace-outbox
+      - ontology-query-trace-outbox
+      - vega-backend
+      - agent-operator-integration
+  mini:
+    image: openbkn-mini:local
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      additional_contexts:
+        foundry: ${MINI_FOUNDRY_DIR:-../bkn-foundry-wt-mini}
+        studio: ${MINI_STUDIO_SRC:-../bkn-studio-wt-hidenav}
+    depends_on:
+      mariadb: {condition: service_healthy}
+      opensearch: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+    ports: ["127.0.0.1:8000:8000"]
+    env_file:
+      - path: ./data/.env
+        required: false
+    volumes: ["./data:/data"]
+    restart: unless-stopped
+volumes:
+  mariadb: {}
+  opensearch: {}

@@ -1,11 +1,14 @@
-// Command mini runs the OpenBKN core Go services in one process (spike).
+// Command mini runs the OpenBKN core Go services in one process.
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
 	"time"
 
@@ -16,6 +19,7 @@ import (
 	vegaapp "github.com/openbkn-ai/bkn-foundry/vega/vega-backend/server/app"
 
 	"github.com/sh00tg0a1/openbkn-mini/internal/fakes"
+	"github.com/sh00tg0a1/openbkn-mini/internal/forward"
 	"github.com/sh00tg0a1/openbkn-mini/internal/gateway"
 )
 
@@ -35,13 +39,17 @@ func main() {
 		}
 	}
 
-	var directModels []fakes.DirectModel
-	if path := os.Getenv("MINI_MODELS_FILE"); path != "" {
-		models, err := fakes.LoadDirectModels(path)
-		must(err, "load models")
-		directModels = models
-		logf("models: %d from %s", len(models), path)
+	// In the container, MariaDB and OpenSearch run as other compose services.
+	if spec := os.Getenv("MINI_FORWARD"); spec != "" {
+		must(forward.Start(spec), "forward")
+		logf("forwarding %s", spec)
 	}
+
+	directModels := loadModels(env("MINI_MODELS_FILE", "./models.json"))
+	// bkn-backend embeds concepts with the default embedding model only when
+	// told to, and fails writes when told to without one.
+	must(setYAMLBool("./config/bkn-backend-config.yaml", "defaultSmallModelEnabled", hasEmbedding(directModels)),
+		"bkn-backend model flag")
 
 	must(fakes.Start(fakes.Config{
 		SafeAddr:    "127.0.0.1:3000",
@@ -52,7 +60,7 @@ func main() {
 		SandboxAddr: "127.0.0.1:8090",
 		OSSAddr:     "127.0.0.1:8095",
 		OSSDir:      env("MINI_OSS_DIR", "./oss-data"),
-		PublicURL:   "http://" + env("MINI_GATEWAY_ADDR", "127.0.0.1:8000"),
+		PublicURL:   env("MINI_PUBLIC_URL", "http://127.0.0.1:8000"),
 		Models: fakes.ModelUpstream{
 			BaseURL:  os.Getenv("MINI_MODEL_UPSTREAM"),
 			AppKey:   os.Getenv("MINI_MODEL_UPSTREAM_APPKEY"),
@@ -85,7 +93,7 @@ func main() {
 	gwAddr := env("MINI_GATEWAY_ADDR", "127.0.0.1:8000")
 	gateway.Start(gwAddr, gateway.DefaultRoutes())
 	waitListening("gateway", gwAddr, 10*time.Second)
-	logf("all services started; gateway on http://%s", gwAddr)
+	logf("all services started; open %s", env("MINI_PUBLIC_URL", "http://127.0.0.1:8000"))
 
 	// Each service also listens for these signals and shuts its own server
 	// down; give them a moment, then end the process.
@@ -95,6 +103,47 @@ func main() {
 	logf("shutting down")
 	time.Sleep(3 * time.Second)
 	os.Exit(0)
+}
+
+// loadModels reads the models file if there is one. Without it mini runs
+// with no models (MINI_MODEL_UPSTREAM can still forward to a platform).
+func loadModels(path string) []fakes.DirectModel {
+	if _, err := os.Stat(path); errors.Is(err, fs.ErrNotExist) {
+		logf("models: none (no %s)", path)
+		return nil
+	}
+	models, err := fakes.LoadDirectModels(path)
+	must(err, "load models")
+	logf("models: %d from %s", len(models), path)
+	return models
+}
+
+func hasEmbedding(models []fakes.DirectModel) bool {
+	for _, m := range models {
+		if m.Type == "embedding" {
+			return true
+		}
+	}
+	return false
+}
+
+// setYAMLBool rewrites "key: true|false" in a service config file when it
+// differs, since the services read these flags only from their files.
+func setYAMLBool(path, key string, value bool) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	re := regexp.MustCompile(`(?m)^(\s*` + regexp.QuoteMeta(key) + `:\s*)(true|false)\s*$`)
+	if !re.Match(data) {
+		return fmt.Errorf("%s: no %q flag", path, key)
+	}
+	updated := re.ReplaceAll(data, []byte(fmt.Sprintf("${1}%t", value)))
+	if string(updated) == string(data) {
+		return nil
+	}
+	logf("%s: %s = %t", path, key, value)
+	return os.WriteFile(path, updated, 0o644)
 }
 
 // start runs one service in a goroutine and waits until it is listening.

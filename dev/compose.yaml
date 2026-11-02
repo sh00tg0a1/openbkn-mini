@@ -33,7 +33,7 @@ services:
     depends_on:
       mariadb: {condition: service_healthy}
     restart: "no"
-    volumes: ["./migrator-secret.yaml:/etc/data-migrator/secret-config.yaml:ro"]
+    volumes: ["../docker/migrator-secret.yaml:/etc/data-migrator/secret-config.yaml:ro"]
     command:
       - python3
       - server/data-migrator.py

@@ -1,0 +1,11 @@
+.git
+bin
+data
+docs
+dev/compose.yaml
+dev/run/oss-data
+dev/run/secrets
+dev/run/backup
+dev/run/*.log
+dev/run/mini.pid
+dev/run/models.json

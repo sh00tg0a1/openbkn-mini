@@ -145,10 +145,10 @@ require (
 )
 
 replace (
-	github.com/openbkn-ai/bkn-foundry/adp/bkn/bkn-backend/server => /Users/cx/Work/openbkn/bkn-foundry-wt-mini/adp/bkn/bkn-backend/server
-	github.com/openbkn-ai/bkn-foundry/adp/bkn/ontology-query/server => /Users/cx/Work/openbkn/bkn-foundry-wt-mini/adp/bkn/ontology-query/server
-	github.com/openbkn-ai/bkn-foundry/adp/context-loader/agent-retrieval => /Users/cx/Work/openbkn/bkn-foundry-wt-mini/adp/context-loader/agent-retrieval
-	github.com/openbkn-ai/bkn-foundry/adp/execution-factory/operator-integration => /Users/cx/Work/openbkn/bkn-foundry-wt-mini/adp/execution-factory/operator-integration
-	github.com/openbkn-ai/bkn-foundry/comm-go => /Users/cx/Work/openbkn/bkn-foundry-wt-mini/comm-go
-	github.com/openbkn-ai/bkn-foundry/vega/vega-backend/server => /Users/cx/Work/openbkn/bkn-foundry-wt-mini/vega/vega-backend/server
+	github.com/openbkn-ai/bkn-foundry/adp/bkn/bkn-backend/server => ../bkn-foundry-wt-mini/adp/bkn/bkn-backend/server
+	github.com/openbkn-ai/bkn-foundry/adp/bkn/ontology-query/server => ../bkn-foundry-wt-mini/adp/bkn/ontology-query/server
+	github.com/openbkn-ai/bkn-foundry/adp/context-loader/agent-retrieval => ../bkn-foundry-wt-mini/adp/context-loader/agent-retrieval
+	github.com/openbkn-ai/bkn-foundry/adp/execution-factory/operator-integration => ../bkn-foundry-wt-mini/adp/execution-factory/operator-integration
+	github.com/openbkn-ai/bkn-foundry/comm-go => ../bkn-foundry-wt-mini/comm-go
+	github.com/openbkn-ai/bkn-foundry/vega/vega-backend/server => ../bkn-foundry-wt-mini/vega/vega-backend/server
 )
