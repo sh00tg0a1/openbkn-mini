@@ -54,7 +54,7 @@ services:
       dockerfile: docker/Dockerfile
       additional_contexts:
         foundry: ${MINI_FOUNDRY_DIR:-../bkn-foundry-wt-mini}
-        studio: ${MINI_STUDIO_SRC:-../bkn-studio-wt-hidenav}
+        studio: ${MINI_STUDIO_SRC:-../bkn-studio-wt-mini}
     depends_on:
       mariadb: {condition: service_healthy}
       opensearch: {condition: service_healthy}

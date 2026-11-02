@@ -13,7 +13,7 @@ docker compose up -d        # 第一次会构建镜像
 open http://127.0.0.1:8000  # 免登录，以 admin 进入
 ```
 
-构建需要旁边有 foundry 和 studio 的源码目录，默认 `../bkn-foundry-wt-mini`、`../bkn-studio-wt-hidenav`，
+构建需要旁边有 foundry 和 studio 的源码目录，默认 `../bkn-foundry-wt-mini`、`../bkn-studio-wt-mini`（都是官方 main 的固定提交），
 可以用环境变量 `MINI_FOUNDRY_DIR`、`MINI_STUDIO_SRC` 换。
 
 ## 配模型（可选）
