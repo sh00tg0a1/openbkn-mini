@@ -12,6 +12,7 @@ import (
 	bknapp "github.com/openbkn-ai/bkn-foundry/adp/bkn/bkn-backend/server/app"
 	oqapp "github.com/openbkn-ai/bkn-foundry/adp/bkn/ontology-query/server/app"
 	clapp "github.com/openbkn-ai/bkn-foundry/adp/context-loader/agent-retrieval/server/app"
+	efapp "github.com/openbkn-ai/bkn-foundry/adp/execution-factory/operator-integration/server/app"
 	vegaapp "github.com/openbkn-ai/bkn-foundry/vega/vega-backend/server/app"
 
 	"github.com/sh00tg0a1/openbkn-mini/internal/fakes"
@@ -25,7 +26,7 @@ func main() {
 		"BKN_TRACE_CORE_URL":                   "http://127.0.0.1:8081",
 		"BKN_TRACE_ARTIFACT_ENDPOINT":          "http://127.0.0.1:8081/artifacts",
 		"BKN_TRACE_EVIDENCE_PUBLISHER_ENABLED": "false",
-		"CONFIG_PROFILE":                       "./cl",
+		"CONFIG_PROFILE":                       "./profile",
 		"TZ":                                   "Asia/Shanghai",
 	}
 	for k, v := range defaults {
@@ -40,9 +41,13 @@ func main() {
 		ModelAddr:    "127.0.0.1:9898",
 		NSQAddr:      "127.0.0.1:4151",
 		TraceAddr:    "127.0.0.1:8081",
+		SandboxAddr:  "127.0.0.1:8090",
+		OSSAddr:      "127.0.0.1:8095",
+		OSSDir:       env("MINI_OSS_DIR", "./oss-data"),
+		PublicURL:    "http://" + env("MINI_GATEWAY_ADDR", "127.0.0.1:8000"),
 		RegistryFile: env("MINI_AUTHZ_REGISTRY", "./authorization-registry.json"),
 	}), "start fakes")
-	for _, addr := range []string{"127.0.0.1:3000", "127.0.0.1:4445", "127.0.0.1:9898", "127.0.0.1:4151", "127.0.0.1:8081"} {
+	for _, addr := range []string{"127.0.0.1:3000", "127.0.0.1:4445", "127.0.0.1:9898", "127.0.0.1:4151", "127.0.0.1:8081", "127.0.0.1:8090", "127.0.0.1:8095"} {
 		waitListening("fake", addr, 10*time.Second)
 	}
 
@@ -53,12 +58,15 @@ func main() {
 	oq := oqapp.Boot(oqapp.Options{})
 	cl, err := clapp.Boot(clapp.Options{})
 	must(err, "context-loader boot")
+	ef, err := efapp.Boot(efapp.Options{})
+	must(err, "execution-factory boot")
 
 	// Vega first: bkn-backend calls it during Run and panics if it is down.
 	start("vega", func() { must(vega.Run(), "vega run") }, env("MINI_VEGA_ADDR", "127.0.0.1:13014"))
 	start("ontology-query", oq.Run, env("MINI_OQ_ADDR", "127.0.0.1:13018"))
 	start("context-loader", func() { must(cl.Run(), "context-loader run") }, env("MINI_CL_ADDR", "127.0.0.1:30779"))
 	start("bkn-backend", bkn.Run, env("MINI_BKN_ADDR", "127.0.0.1:13015"))
+	start("execution-factory", func() { must(ef.Run(), "execution-factory run") }, env("MINI_EF_ADDR", "127.0.0.1:9000"))
 
 	gwAddr := env("MINI_GATEWAY_ADDR", "127.0.0.1:8000")
 	gateway.Start(gwAddr, gateway.DefaultRoutes())

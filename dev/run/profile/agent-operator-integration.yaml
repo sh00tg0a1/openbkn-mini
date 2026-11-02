@@ -1,0 +1,108 @@
+project:
+  language: zh-CN
+  host: "127.0.0.1"
+  port: 9000
+  logger_level: 1
+  name:
+  pod_id: "POD_ID"
+  machine_id: ""
+  debug: false
+mcp:
+  conn_timeout: 10 # Unit: second.
+  max_instances: 200
+  instance_ttl: 1800 # Unit: second.
+  cleanup_interval: 60 # Unit: second.
+category:
+  init_switch: true # Whether to initialize built-in categories.
+
+proxy_module:
+  default_timeout: 30 # Unit: second.
+  max_timeout: 120 # Unit: second.
+  min_timeout: 1 # Unit: second.
+  max_clients: 100
+  client_lifetime: 300 # Unit: second.
+
+oauth:
+  # Compatible with hydra service.
+  public_host: "127.0.0.1"
+  public_port: 4444
+  public_protocol: "http"
+  admin_host: "127.0.0.1"
+  admin_port: 4445
+  admin_protocol: "http"
+  admin_prefix: "/admin"
+agent-operator-app:
+  private_host: "127.0.0.1"
+  private_port: 9000
+  private_protocol: "http"
+mf-model-api:
+  private_host: "127.0.0.1"
+  private_port: 9898
+  private_protocol: "http"
+mf-model-manager:
+  private_host: "127.0.0.1"
+  private_port: 9898
+  private_protocol: "http"
+db:
+  conn_timeout: 30
+  read_timeout: 30
+  write_timeout: 30
+  max_open_conns: 30
+  system_id: ""
+business-system-service:
+  private_host: "127.0.0.1"
+  private_port: 80
+  private_protocol: "http"
+sandbox-control-plane:
+  private_host: "127.0.0.1"
+  private_port: 8090
+  private_protocol: "http"
+  template_id: "" # Template ID.
+  session_resources:
+    cpu: 1
+    memory: 512Mi
+    disk: 1Gi
+    timeout: 3600 # Unit: second.
+  max_sessions: 3
+  active_sessions: 1
+  max_concurrent_tasks: 100
+vega-backend:
+  private_host: "127.0.0.1"
+  private_port: 13014
+  private_protocol: "http"
+
+redis:
+  connectType: "standalone"
+  enableSSL: false
+  secretName: ""
+  caName: ""
+  certName: ""
+  keyName: ""
+  poolSize: 10
+
+# ai auxiliary related configuration.
+ai_generation_config:
+  # python code generation system prompt word ID.
+  python_function_generator_prompt_id: "" # If empty or not found, the default prompt word is used.
+  metadata_param_generator_prompt_id: "" # If empty or not found, the default prompt word is used.
+  llm:
+    model: ""
+    max_tokens: 1024
+    temperature: 0.1
+    top_k: 20
+    top_p: 0.1
+    frequency_penalty: 0.1
+    presence_penalty: 0.1
+
+oss-gateway-backend:
+  private_host: "127.0.0.1"
+  private_port: 8095
+  private_protocol: "http"
+  storage_id: ""
+  internal_request: false
+  expires: 3600
+
+# PyPI indexes that dependency version lookups may query (trusted-mirror allowlist).
+pypi:
+  trusted_index_urls:
+    - "https://pypi.org/simple"

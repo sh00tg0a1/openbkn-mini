@@ -6,17 +6,21 @@ require (
 	github.com/openbkn-ai/bkn-foundry/adp/bkn/bkn-backend/server v0.0.0
 	github.com/openbkn-ai/bkn-foundry/adp/bkn/ontology-query/server v0.0.0
 	github.com/openbkn-ai/bkn-foundry/adp/context-loader/agent-retrieval v0.0.0
+	github.com/openbkn-ai/bkn-foundry/adp/execution-factory/operator-integration v0.0.0
 	github.com/openbkn-ai/bkn-foundry/vega/vega-backend/server v0.0.0
 )
 
 require (
 	filippo.io/edwards25519 v1.2.0 // indirect
 	gitee.com/chunanyong/dm v1.8.23 // indirect
+	github.com/DATA-DOG/go-sqlmock v1.5.2 // indirect
 	github.com/IBM/sarama v1.61.1 // indirect
+	github.com/Masterminds/semver/v3 v3.5.0 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/PaesslerAG/gval v1.0.0 // indirect
 	github.com/PaesslerAG/jsonpath v0.1.1 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
+	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/avast/retry-go v3.0.0+incompatible // indirect
 	github.com/bytedance/gopkg v0.1.4 // indirect
 	github.com/bytedance/sonic v1.15.4 // indirect
@@ -34,13 +38,16 @@ require (
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.15 // indirect
+	github.com/getkin/kin-openapi v0.149.0 // indirect
 	github.com/gin-contrib/sse v1.1.1 // indirect
 	github.com/gin-gonic/gin v1.12.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-openapi/jsonpointer v1.0.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.30.4 // indirect
+	github.com/go-python/gpython v0.2.0 // indirect
 	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-sql-driver/mysql v1.10.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
@@ -71,14 +78,19 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/nsqio/go-nsq v1.1.0 // indirect
+	github.com/oasdiff/yaml v0.1.1 // indirect
+	github.com/oasdiff/yaml3 v0.0.14 // indirect
 	github.com/openbkn-ai/bkn-foundry/comm-go v0.1.9-0.20261102015423-8e29f3f0c9a8 // indirect
 	github.com/openbkn-ai/licverify v0.5.1 // indirect
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/pierrec/lz4/v4 v4.1.33 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.61.0 // indirect
+	github.com/qustavo/sqlhooks/v2 v2.1.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
+	github.com/redis/go-redis/v9 v9.22.0 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sagikazarmark/locafero v0.12.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
@@ -112,6 +124,7 @@ require (
 	go.opentelemetry.io/otel/sdk/log v0.22.0 // indirect
 	go.opentelemetry.io/otel/trace v1.46.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.28.0 // indirect
@@ -135,6 +148,7 @@ replace (
 	github.com/openbkn-ai/bkn-foundry/adp/bkn/bkn-backend/server => /Users/cx/Work/openbkn/bkn-foundry-wt-mini/adp/bkn/bkn-backend/server
 	github.com/openbkn-ai/bkn-foundry/adp/bkn/ontology-query/server => /Users/cx/Work/openbkn/bkn-foundry-wt-mini/adp/bkn/ontology-query/server
 	github.com/openbkn-ai/bkn-foundry/adp/context-loader/agent-retrieval => /Users/cx/Work/openbkn/bkn-foundry-wt-mini/adp/context-loader/agent-retrieval
+	github.com/openbkn-ai/bkn-foundry/adp/execution-factory/operator-integration => /Users/cx/Work/openbkn/bkn-foundry-wt-mini/adp/execution-factory/operator-integration
 	github.com/openbkn-ai/bkn-foundry/comm-go => /Users/cx/Work/openbkn/bkn-foundry-wt-mini/comm-go
 	github.com/openbkn-ai/bkn-foundry/vega/vega-backend/server => /Users/cx/Work/openbkn/bkn-foundry-wt-mini/vega/vega-backend/server
 )

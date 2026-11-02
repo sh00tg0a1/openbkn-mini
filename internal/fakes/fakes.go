@@ -28,6 +28,10 @@ type Config struct {
 	ModelAddr    string // mf-model-api and mf-model-manager
 	NSQAddr      string // nsqd HTTP publish
 	TraceAddr    string // BKN Trace core
+	SandboxAddr  string // sandbox control plane
+	OSSAddr      string // oss-gateway-backend
+	OSSDir       string // where the OSS fake keeps files
+	PublicURL    string // how clients reach mini (the gateway), for OSS download links
 	RegistryFile string // bkn-safe authorization-registry.json
 }
 
@@ -38,11 +42,13 @@ func Start(cfg Config) error {
 		return err
 	}
 	servers := map[string]http.Handler{
-		cfg.SafeAddr:  logged("safe", newSafe(reg)),
-		cfg.HydraAddr: logged("hydra", newHydra()),
-		cfg.ModelAddr: logged("model", newModel()),
-		cfg.NSQAddr:   logged("nsq", newNSQ()),
-		cfg.TraceAddr: logged("trace", newTrace()),
+		cfg.SafeAddr:    logged("safe", newSafe(reg)),
+		cfg.HydraAddr:   logged("hydra", newHydra()),
+		cfg.ModelAddr:   logged("model", newModel()),
+		cfg.NSQAddr:     logged("nsq", newNSQ()),
+		cfg.TraceAddr:   logged("trace", newTrace()),
+		cfg.SandboxAddr: logged("sandbox", newSandbox()),
+		cfg.OSSAddr:     logged("oss", newOSS(cfg.OSSDir, cfg.PublicURL)),
 	}
 	for addr, h := range servers {
 		srv := &http.Server{Addr: addr, Handler: h, ReadHeaderTimeout: 10 * time.Second}

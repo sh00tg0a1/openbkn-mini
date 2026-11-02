@@ -1,0 +1,10 @@
+auth:
+  mechanism: PLAIN
+  password: ""
+  username: ""
+connectorType: nsq
+mqHost: "127.0.0.1"
+mqLookupdHost: ""
+mqLookupdPort: 0
+mqPort: 4151
+mqType: nsq
