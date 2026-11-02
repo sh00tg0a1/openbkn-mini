@@ -2,3 +2,5 @@
 /dev/run/mini.log
 /dev/run/mini.pid
 /dev/run/oss-data/
+/dev/run/secrets/
+/dev/run/backup/

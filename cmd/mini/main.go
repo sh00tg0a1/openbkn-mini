@@ -35,16 +35,30 @@ func main() {
 		}
 	}
 
+	var directModels []fakes.DirectModel
+	if path := os.Getenv("MINI_MODELS_FILE"); path != "" {
+		models, err := fakes.LoadDirectModels(path)
+		must(err, "load models")
+		directModels = models
+		logf("models: %d from %s", len(models), path)
+	}
+
 	must(fakes.Start(fakes.Config{
-		SafeAddr:     "127.0.0.1:3000",
-		HydraAddr:    "127.0.0.1:4445",
-		ModelAddr:    "127.0.0.1:9898",
-		NSQAddr:      "127.0.0.1:4151",
-		TraceAddr:    "127.0.0.1:8081",
-		SandboxAddr:  "127.0.0.1:8090",
-		OSSAddr:      "127.0.0.1:8095",
-		OSSDir:       env("MINI_OSS_DIR", "./oss-data"),
-		PublicURL:    "http://" + env("MINI_GATEWAY_ADDR", "127.0.0.1:8000"),
+		SafeAddr:    "127.0.0.1:3000",
+		HydraAddr:   "127.0.0.1:4445",
+		ModelAddr:   "127.0.0.1:9898",
+		NSQAddr:     "127.0.0.1:4151",
+		TraceAddr:   "127.0.0.1:8081",
+		SandboxAddr: "127.0.0.1:8090",
+		OSSAddr:     "127.0.0.1:8095",
+		OSSDir:      env("MINI_OSS_DIR", "./oss-data"),
+		PublicURL:   "http://" + env("MINI_GATEWAY_ADDR", "127.0.0.1:8000"),
+		Models: fakes.ModelUpstream{
+			BaseURL:  os.Getenv("MINI_MODEL_UPSTREAM"),
+			AppKey:   os.Getenv("MINI_MODEL_UPSTREAM_APPKEY"),
+			Insecure: os.Getenv("MINI_MODEL_UPSTREAM_INSECURE") == "1",
+		},
+		DirectModels: directModels,
 		RegistryFile: env("MINI_AUTHZ_REGISTRY", "./authorization-registry.json"),
 	}), "start fakes")
 	for _, addr := range []string{"127.0.0.1:3000", "127.0.0.1:4445", "127.0.0.1:9898", "127.0.0.1:4151", "127.0.0.1:8081", "127.0.0.1:8090", "127.0.0.1:8095"} {

@@ -1,0 +1,26 @@
+{
+  "models": [
+    {
+      "name": "text-embedding-v4",
+      "type": "embedding",
+      "url": "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings",
+      "api_key_env": "DASHSCOPE_API_KEY",
+      "embedding_dim": 1024,
+      "batch_size": 10,
+      "max_tokens": 512
+    },
+    {
+      "name": "gte-rerank-v2",
+      "type": "reranker",
+      "format": "dashscope",
+      "url": "https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank",
+      "api_key_env": "DASHSCOPE_API_KEY"
+    },
+    {
+      "name": "qwen-plus",
+      "type": "llm",
+      "url": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+      "api_key_env": "DASHSCOPE_API_KEY"
+    }
+  ]
+}

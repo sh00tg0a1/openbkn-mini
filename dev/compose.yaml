@@ -26,6 +26,26 @@ services:
       test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
       interval: 5s
       retries: 60
+  # One-shot: creates or upgrades the schemas of the services mini runs, then exits.
+  # Same migrations as the platform release this mini build pins.
+  migrate:
+    image: ghcr.io/openbkn-ai/core-data-migrator:0.2.1-main.20261102103355.sha4ad79e6
+    depends_on:
+      mariadb: {condition: service_healthy}
+    restart: "no"
+    volumes: ["./migrator-secret.yaml:/etc/data-migrator/secret-config.yaml:ro"]
+    command:
+      - python3
+      - server/data-migrator.py
+      - migrate
+      - --config=/app/config.yaml
+      - --secret-config=/etc/data-migrator/secret-config.yaml
+      - --service
+      - bkn-backend
+      - bkn-backend-trace-outbox
+      - ontology-query-trace-outbox
+      - vega-backend
+      - agent-operator-integration
   redis:
     image: redis:7
     command: ["redis-server", "--save", "", "--appendonly", "no"]

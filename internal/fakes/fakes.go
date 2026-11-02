@@ -23,16 +23,18 @@ const (
 
 // Config holds listen addresses and data files for the fakes.
 type Config struct {
-	SafeAddr     string // bkn-safe
-	HydraAddr    string // Hydra admin
-	ModelAddr    string // mf-model-api and mf-model-manager
-	NSQAddr      string // nsqd HTTP publish
-	TraceAddr    string // BKN Trace core
-	SandboxAddr  string // sandbox control plane
-	OSSAddr      string // oss-gateway-backend
-	OSSDir       string // where the OSS fake keeps files
-	PublicURL    string // how clients reach mini (the gateway), for OSS download links
-	RegistryFile string // bkn-safe authorization-registry.json
+	SafeAddr     string        // bkn-safe
+	HydraAddr    string        // Hydra admin
+	ModelAddr    string        // mf-model-api and mf-model-manager
+	NSQAddr      string        // nsqd HTTP publish
+	TraceAddr    string        // BKN Trace core
+	SandboxAddr  string        // sandbox control plane
+	OSSAddr      string        // oss-gateway-backend
+	OSSDir       string        // where the OSS fake keeps files
+	PublicURL    string        // how clients reach mini (the gateway), for OSS download links
+	Models       ModelUpstream // forward to another OpenBKN platform
+	DirectModels []DirectModel // or call providers directly; wins over Models
+	RegistryFile string        // bkn-safe authorization-registry.json
 }
 
 // Start launches every fake in its own goroutine.
@@ -44,7 +46,7 @@ func Start(cfg Config) error {
 	servers := map[string]http.Handler{
 		cfg.SafeAddr:    logged("safe", newSafe(reg)),
 		cfg.HydraAddr:   logged("hydra", newHydra()),
-		cfg.ModelAddr:   logged("model", newModel()),
+		cfg.ModelAddr:   logged("model", newModel(cfg.Models, cfg.DirectModels)),
 		cfg.NSQAddr:     logged("nsq", newNSQ()),
 		cfg.TraceAddr:   logged("trace", newTrace()),
 		cfg.SandboxAddr: logged("sandbox", newSandbox()),
@@ -71,6 +73,15 @@ func (r *statusRecorder) WriteHeader(code int) {
 	r.status = code
 	r.ResponseWriter.WriteHeader(code)
 }
+
+// Flush and Unwrap keep streamed responses (SSE chat) flowing through the log wrapper.
+func (r *statusRecorder) Flush() {
+	if f, ok := r.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+func (r *statusRecorder) Unwrap() http.ResponseWriter { return r.ResponseWriter }
 
 // logged prints unimplemented routes always, and every request when
 // MINI_FAKE_LOG is set.
