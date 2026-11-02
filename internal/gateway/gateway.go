@@ -65,8 +65,9 @@ func Start(addr string, routes []Route) {
 		// studio's own permission filter hides the rest of the console.
 		fmt.Fprintln(w, `window.__BKN_STUDIO_RUNTIME__ = {
   mode: "hosted",
-  // Services mini does not run: BKN project, Trace, BKN Agent, function tools.
-  hiddenNavigation: ["bkn-project", "observability", "experience-agent", "functions"],
+  // Services mini does not run: BKN project, Trace, BKN Agent, function tools,
+  // object metrics; and the graph explorer upgrade entry (enterprise only).
+  hiddenNavigation: ["bkn-project", "observability", "experience-agent", "functions", "metrics", "graph_explorer"],
   features: { executionFactoryLab: { function: false } },
   currentUser: {
     id: "266c6a42-6131-4d62-8f39-853e7093701c",
