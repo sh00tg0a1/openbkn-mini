@@ -56,9 +56,12 @@ services:
       # code does not run). Set it in .env next to this file or on the command line.
       args:
         MINI_SANDBOX: ${MINI_SANDBOX:-on}
+        SANDBOX_IMAGE: ghcr.io/openbkn-ai/sandbox-template-python-basic:0.2.1-main.20261101145631.shad3e6fca
+      # The platform sources mini builds from, pinned to these commits. Set
+      # MINI_FOUNDRY_DIR / MINI_STUDIO_SRC to build from local checkouts instead.
       additional_contexts:
-        foundry: ${MINI_FOUNDRY_DIR:-../bkn-foundry-wt-mini}
-        studio: ${MINI_STUDIO_SRC:-../bkn-studio-wt-mini}
+        foundry: ${MINI_FOUNDRY_DIR:-https://github.com/openbkn-ai/bkn-foundry.git#4ad79e6591c9072498037cef4b6d6a9cf4fb50bb}
+        studio: ${MINI_STUDIO_SRC:-https://github.com/openbkn-ai/bkn-studio.git#a4cfb20a8b513ddcece6daeb7566e22a690a7818}
     depends_on:
       mariadb: {condition: service_healthy}
       opensearch: {condition: service_healthy}

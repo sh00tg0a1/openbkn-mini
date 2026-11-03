@@ -29,10 +29,9 @@ open http://127.0.0.1:8000/studio/   # no sign-in; you are admin
 
 Use `127.0.0.1`, not `localhost`: a studio dev server on port 8000 answers on `localhost`.
 
-The build needs [bkn-foundry](https://github.com/openbkn-ai/bkn-foundry) and
-[bkn-studio](https://github.com/openbkn-ai/bkn-studio) checkouts next to this repository, by default
-`../bkn-foundry-wt-mini` and `../bkn-studio-wt-mini` (pinned commits of their `main`). Set
-`MINI_FOUNDRY_DIR` and `MINI_STUDIO_SRC` to use others.
+The build fetches [bkn-foundry](https://github.com/openbkn-ai/bkn-foundry) and
+[bkn-studio](https://github.com/openbkn-ai/bkn-studio) from GitHub at the commits pinned in
+`compose.yaml`. To build from local checkouts instead, set `MINI_FOUNDRY_DIR` and `MINI_STUDIO_SRC`.
 
 ## Without the sandbox (optional)
 
@@ -72,4 +71,24 @@ knowledge network concepts.
 | `internal/forward` | In the container, relays the 127.0.0.1 database and OpenSearch ports to the compose services |
 | `docker/` | Image, entry script and the migration tool's connection settings |
 | `dev/` | For running mini directly on the host: a compose file for its dependencies and the run directory (configs) |
+| `scripts/smoke.sh` | Smoke test against a running mini: data source, network, query, Cypher, MCP, Function, Skill |
+| `scripts/upstream.py` | The pinned upstream versions, and moving them forward |
 | `data/` | Your files: models.json, .env and uploaded files (not in git) |
+
+## Versions and tracking
+
+`compose.yaml` pins the bkn-foundry and bkn-studio commits and the platform images built from that
+foundry commit (the migration tool and the sandbox template). Every night a GitHub Actions workflow
+(`.github/workflows/track-upstream.yml`) moves the pins to the newest `main` of both, builds mini,
+runs `scripts/smoke.sh` with and without the sandbox, and opens or updates one pull request. The pull
+request lists the foundry config files mini keeps adapted copies of and the studio code its
+`config.js` depends on, when those changed. A failure opens an issue instead. You can also start the
+workflow by hand, with other branches or commits.
+
+To run the smoke test yourself: `scripts/smoke.sh` (it needs the `openbkn` CLI and cleans up after
+itself).
+
+## License
+
+[OpenBKN License](LICENSE), a modified Apache License 2.0. The platform sources and images mini
+builds from and runs keep their own licenses.

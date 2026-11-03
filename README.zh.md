@@ -25,9 +25,9 @@ open http://127.0.0.1:8000/studio/   # 免登录，以 admin 进入
 
 地址要写 `127.0.0.1`，不要写 `localhost`：本机如果在 8000 端口开着 studio 开发服务器，`localhost` 会进到它那里。
 
-构建需要旁边有 [bkn-foundry](https://github.com/openbkn-ai/bkn-foundry) 和
-[bkn-studio](https://github.com/openbkn-ai/bkn-studio) 的源码目录，默认 `../bkn-foundry-wt-mini`、`../bkn-studio-wt-mini`
-（都是各自 `main` 的固定提交），可以用环境变量 `MINI_FOUNDRY_DIR`、`MINI_STUDIO_SRC` 换。
+构建时按 `compose.yaml` 里固定的提交，从 GitHub 拉取 [bkn-foundry](https://github.com/openbkn-ai/bkn-foundry)
+和 [bkn-studio](https://github.com/openbkn-ai/bkn-studio) 的源码。想用本地源码构建，设置环境变量
+`MINI_FOUNDRY_DIR`、`MINI_STUDIO_SRC`。
 
 ## 不装沙箱（可选）
 
@@ -64,4 +64,21 @@ docker compose restart mini
 | `internal/forward` | 容器里把 127.0.0.1 上的数据库、OpenSearch 端口转到 compose 服务 |
 | `docker/` | 镜像、启动脚本、迁移工具的连接配置 |
 | `dev/` | 在本机直接跑 mini 用：依赖服务的 compose 文件和运行目录（配置） |
+| `scripts/smoke.sh` | 对运行中的 mini 做冒烟测试：数据源、建网、查询、Cypher、MCP、函数、Skill |
+| `scripts/upstream.py` | 读取和更新固定的上游版本 |
 | `data/` | 你自己的文件：models.json、.env、上传的文件（不进 git） |
+
+## 版本与自动跟踪
+
+`compose.yaml` 固定了 bkn-foundry、bkn-studio 的提交，以及由该 foundry 提交构建的平台镜像（迁移工具、
+沙箱模板）。GitHub Actions 每晚（`.github/workflows/track-upstream.yml`）把它们更新到两个仓库 `main`
+的最新提交，构建 mini，带沙箱和不带沙箱各跑一遍 `scripts/smoke.sh`，通过后开一个 PR（已有就更新）。
+如果 mini 改编过的 foundry 配置文件，或 `config.js` 依赖的 studio 代码有变化，PR 里会列出来。失败则开
+issue。也可以手动触发，指定别的分支或提交。
+
+自己跑冒烟测试：`scripts/smoke.sh`（需要 `openbkn` 命令行，跑完自动清理）。
+
+## 许可证
+
+[OpenBKN License](LICENSE)，即改过的 Apache License 2.0。mini 构建和运行所用的平台源码与镜像，仍按
+它们各自的许可证。

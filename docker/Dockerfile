@@ -13,8 +13,8 @@ ARG GO_IMAGE=golang:1.26.9
 ARG NODE_IMAGE=node:22-alpine
 # The sandbox runtime base is the platform's sandbox template image: Python
 # 3.11, the official function executor, the BKN SDKs and the common data
-# packages. Pick the tag built from the foundry commit mini pins (or the latest
-# before it).
+# packages: the tag built from the foundry commit mini pins (or the latest
+# before it). compose.yaml passes the pinned tag; this default matches it.
 ARG SANDBOX_IMAGE=ghcr.io/openbkn-ai/sandbox-template-python-basic:0.2.1-main.20261101145631.shad3e6fca
 ARG REDIS_IMAGE=redis:7
 
