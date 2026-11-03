@@ -31,7 +31,7 @@ services:
     restart: unless-stopped
   # Creates or upgrades the schemas of the services mini runs, then exits.
   migrate:
-    image: ghcr.io/openbkn-ai/core-data-migrator:0.2.1-main.20261103025212.shabab2eaf
+    image: ghcr.io/openbkn-ai/core-data-migrator:0.2.1-main.20261104042853.shaa8228ed
     depends_on:
       mariadb: {condition: service_healthy}
     volumes: ["./docker/migrator-secret.yaml:/etc/data-migrator/secret-config.yaml:ro"]
@@ -60,8 +60,8 @@ services:
       # The platform sources mini builds from, pinned to these commits. Set
       # MINI_FOUNDRY_DIR / MINI_STUDIO_SRC to build from local checkouts instead.
       additional_contexts:
-        foundry: ${MINI_FOUNDRY_DIR:-https://github.com/openbkn-ai/bkn-foundry.git#fbdcb42f2b7203972c0e3e282eb5a653a13505ec}
-        studio: ${MINI_STUDIO_SRC:-https://github.com/openbkn-ai/bkn-studio.git#df18b33c24314ff44a33851648ac4ef515d2e034}
+        foundry: ${MINI_FOUNDRY_DIR:-https://github.com/openbkn-ai/bkn-foundry.git#2764303f5274be74829bb2d270bdc376ad1664e4}
+        studio: ${MINI_STUDIO_SRC:-https://github.com/openbkn-ai/bkn-studio.git#bf6a797b2bbaba6a6f6aa17c4fa7208f389836f1}
     depends_on:
       mariadb: {condition: service_healthy}
       opensearch: {condition: service_healthy}
