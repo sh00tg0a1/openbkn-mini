@@ -1,4 +1,4 @@
-# openbkn mini: docker compose up -d, then open http://127.0.0.1:8000
+# openbkn mini: docker compose up -d, then open http://127.0.0.1:8000 (or MINI_PORT)
 #
 # ./data holds files you own: models.json (copy from dev/run/models.example.json)
 # and .env for the API keys it names. Database and search data live in volumes.
@@ -66,7 +66,13 @@ services:
       mariadb: {condition: service_healthy}
       opensearch: {condition: service_healthy}
       migrate: {condition: service_completed_successfully}
-    ports: ["127.0.0.1:8000:8000"]
+    # MINI_PORT (default 8000; set it in .env next to this file) is the port
+    # on this machine and also inside the container, so the links mini hands out
+    # (Skill files) work from the browser and from the services alike.
+    ports: ["127.0.0.1:${MINI_PORT:-8000}:${MINI_PORT:-8000}"]
+    environment:
+      MINI_GATEWAY_ADDR: 0.0.0.0:${MINI_PORT:-8000}
+      MINI_PUBLIC_URL: ${MINI_PUBLIC_URL:-http://127.0.0.1:${MINI_PORT:-8000}}
     # The execution factory calls Function tools at this fixed address.
     extra_hosts: ["agent-operator-integration:127.0.0.1"]
     init: true

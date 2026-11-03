@@ -33,6 +33,18 @@ The build fetches [bkn-foundry](https://github.com/openbkn-ai/bkn-foundry) and
 [bkn-studio](https://github.com/openbkn-ai/bkn-studio) from GitHub at the commits pinned in
 `compose.yaml`. To build from local checkouts instead, set `MINI_FOUNDRY_DIR` and `MINI_STUDIO_SRC`.
 
+## Another port (optional)
+
+```bash
+echo 'MINI_PORT=8010' >> .env        # the .env next to compose.yaml, not data/.env
+docker compose up -d
+open http://127.0.0.1:8010/studio/
+```
+
+mini listens on that port inside the container as well, so the links it hands out (Skill files)
+work everywhere. A few ports are taken inside the container (8080 and 9000 among them); mini
+refuses those at startup and says which part uses the port.
+
 ## Without the sandbox (optional)
 
 ```bash
@@ -80,10 +92,10 @@ knowledge network concepts.
 `compose.yaml` pins the bkn-foundry and bkn-studio commits and the platform images built from that
 foundry commit (the migration tool and the sandbox template). Every night a GitHub Actions workflow
 (`.github/workflows/track-upstream.yml`) moves the pins to the newest `main` of both, builds mini,
-runs `scripts/smoke.sh` with and without the sandbox, and opens or updates one pull request. The pull
-request lists the foundry config files mini keeps adapted copies of and the studio code its
-`config.js` depends on, when those changed. A failure opens an issue instead. You can also start the
-workflow by hand, with other branches or commits.
+runs `scripts/smoke.sh` with and without the sandbox (the second run on port 8010), and commits the
+new pins to `main`. The commit message lists the foundry config files mini keeps adapted copies of
+and the studio code its `config.js` depends on, when those changed. A failure opens an issue
+instead. You can also start the workflow by hand, with other branches or commits.
 
 To run the smoke test yourself: `scripts/smoke.sh` (it needs the `openbkn` CLI and cleans up after
 itself).

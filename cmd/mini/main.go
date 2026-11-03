@@ -7,9 +7,11 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"regexp"
+	"strings"
 	"syscall"
 	"time"
 
@@ -24,10 +26,33 @@ import (
 	"github.com/sh00tg0a1/openbkn-mini/internal/gateway"
 )
 
+// Where mini's stand-ins listen: the platform configs under dev/run point here.
+const (
+	safeAddr    = "127.0.0.1:3000"
+	hydraAddr   = "127.0.0.1:4445"
+	modelAddr   = "127.0.0.1:9898"
+	nsqAddr     = "127.0.0.1:4151"
+	traceAddr   = "127.0.0.1:8081"
+	sandboxAddr = "127.0.0.1:8090"
+	ossAddr     = "127.0.0.1:8095"
+)
+
+// Where the platform services listen, as their configs say.
+var (
+	vegaAddr = env("MINI_VEGA_ADDR", "127.0.0.1:13014")
+	oqAddr   = env("MINI_OQ_ADDR", "127.0.0.1:13018")
+	clAddr   = env("MINI_CL_ADDR", "127.0.0.1:30779")
+	bknAddr  = env("MINI_BKN_ADDR", "127.0.0.1:13015")
+	efAddr   = env("MINI_EF_ADDR", "127.0.0.1:9000")
+)
+
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
 		os.Exit(healthcheck())
 	}
+
+	gwAddr := env("MINI_GATEWAY_ADDR", "127.0.0.1:8000")
+	must(checkGatewayPort(gwAddr, insideListeners()), "gateway")
 
 	// Process-wide settings the platform services read from the environment.
 	defaults := map[string]string{
@@ -57,13 +82,13 @@ func main() {
 		"bkn-backend model flag")
 
 	must(fakes.Start(fakes.Config{
-		SafeAddr:    "127.0.0.1:3000",
-		HydraAddr:   "127.0.0.1:4445",
-		ModelAddr:   "127.0.0.1:9898",
-		NSQAddr:     "127.0.0.1:4151",
-		TraceAddr:   "127.0.0.1:8081",
-		SandboxAddr: "127.0.0.1:8090",
-		OSSAddr:     "127.0.0.1:8095",
+		SafeAddr:    safeAddr,
+		HydraAddr:   hydraAddr,
+		ModelAddr:   modelAddr,
+		NSQAddr:     nsqAddr,
+		TraceAddr:   traceAddr,
+		SandboxAddr: sandboxAddr,
+		OSSAddr:     ossAddr,
 		OSSDir:      env("MINI_OSS_DIR", "./oss-data"),
 		PublicURL:   env("MINI_PUBLIC_URL", "http://127.0.0.1:8000"),
 		Models: fakes.ModelUpstream{
@@ -78,7 +103,7 @@ func main() {
 		},
 		RegistryFile: env("MINI_AUTHZ_REGISTRY", "./authorization-registry.json"),
 	}), "start fakes")
-	for _, addr := range []string{"127.0.0.1:3000", "127.0.0.1:4445", "127.0.0.1:9898", "127.0.0.1:4151", "127.0.0.1:8081", "127.0.0.1:8090", "127.0.0.1:8095"} {
+	for _, addr := range []string{safeAddr, hydraAddr, modelAddr, nsqAddr, traceAddr, sandboxAddr, ossAddr} {
 		waitListening("fake", addr, 10*time.Second)
 	}
 
@@ -93,13 +118,12 @@ func main() {
 	must(err, "execution-factory boot")
 
 	// Vega first: bkn-backend calls it during Run and panics if it is down.
-	start("vega", func() { must(vega.Run(), "vega run") }, env("MINI_VEGA_ADDR", "127.0.0.1:13014"))
-	start("ontology-query", oq.Run, env("MINI_OQ_ADDR", "127.0.0.1:13018"))
-	start("context-loader", func() { must(cl.Run(), "context-loader run") }, env("MINI_CL_ADDR", "127.0.0.1:30779"))
-	start("bkn-backend", bkn.Run, env("MINI_BKN_ADDR", "127.0.0.1:13015"))
-	start("execution-factory", func() { must(ef.Run(), "execution-factory run") }, env("MINI_EF_ADDR", "127.0.0.1:9000"))
+	start("vega", func() { must(vega.Run(), "vega run") }, vegaAddr)
+	start("ontology-query", oq.Run, oqAddr)
+	start("context-loader", func() { must(cl.Run(), "context-loader run") }, clAddr)
+	start("bkn-backend", bkn.Run, bknAddr)
+	start("execution-factory", func() { must(ef.Run(), "execution-factory run") }, efAddr)
 
-	gwAddr := env("MINI_GATEWAY_ADDR", "127.0.0.1:8000")
 	sandbox := os.Getenv("MINI_EXECUTOR_URL") != ""
 	logf("function executor: %v", sandbox)
 	gateway.Start(gwAddr, gateway.DefaultRoutes(), gateway.Options{Sandbox: sandbox})
@@ -135,6 +159,50 @@ func healthcheck() int {
 		return 1
 	}
 	return 0
+}
+
+// insideListeners names what else listens inside mini, by address.
+func insideListeners() map[string]string {
+	inside := map[string]string{
+		safeAddr:         "the bkn-safe stand-in",
+		hydraAddr:        "the Hydra stand-in",
+		modelAddr:        "the model stand-in",
+		nsqAddr:          "the NSQ stand-in",
+		traceAddr:        "the trace stand-in",
+		sandboxAddr:      "the sandbox stand-in",
+		ossAddr:          "the OSS stand-in",
+		vegaAddr:         "vega",
+		oqAddr:           "ontology-query",
+		clAddr:           "context-loader",
+		bknAddr:          "bkn-backend",
+		efAddr:           "execution-factory",
+		"127.0.0.1:6379": "Redis", // started by docker/entrypoint.sh
+	}
+	if u, err := url.Parse(os.Getenv("MINI_EXECUTOR_URL")); err == nil && u.Host != "" {
+		inside[u.Host] = "the function executor"
+	}
+	for _, pair := range strings.Split(os.Getenv("MINI_FORWARD"), ",") {
+		if listen, target, ok := strings.Cut(pair, "="); ok {
+			inside[strings.TrimSpace(listen)] = "the forward to " + strings.TrimSpace(target)
+		}
+	}
+	return inside
+}
+
+// checkGatewayPort refuses a gateway port another part of mini listens on.
+// With docker compose the gateway listens on MINI_PORT inside the container as
+// well as outside it, so the links mini hands out work in both places.
+func checkGatewayPort(gateway string, inside map[string]string) error {
+	_, port, err := net.SplitHostPort(gateway)
+	if err != nil {
+		return err
+	}
+	for addr, name := range inside {
+		if _, p, err := net.SplitHostPort(addr); err == nil && p == port {
+			return fmt.Errorf("port %s is taken inside mini by %s; set MINI_PORT to another port", port, name)
+		}
+	}
+	return nil
 }
 
 // loadModels reads the models file if there is one. Without it mini runs

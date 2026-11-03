@@ -29,6 +29,17 @@ open http://127.0.0.1:8000/studio/   # 免登录，以 admin 进入
 和 [bkn-studio](https://github.com/openbkn-ai/bkn-studio) 的源码。想用本地源码构建，设置环境变量
 `MINI_FOUNDRY_DIR`、`MINI_STUDIO_SRC`。
 
+## 换端口（可选）
+
+```bash
+echo 'MINI_PORT=8010' >> .env        # 和 compose.yaml 同目录的 .env，不是 data/.env
+docker compose up -d
+open http://127.0.0.1:8010/studio/
+```
+
+容器里也监听同一个端口，所以 mini 给出的链接（Skill 文件）在哪儿都能打开。容器里有几个端口已被占用
+（包括 8080、9000），选到它们时 mini 启动就会报错，并说明被谁占用。
+
 ## 不装沙箱（可选）
 
 ```bash
@@ -72,9 +83,9 @@ docker compose restart mini
 
 `compose.yaml` 固定了 bkn-foundry、bkn-studio 的提交，以及由该 foundry 提交构建的平台镜像（迁移工具、
 沙箱模板）。GitHub Actions 每晚（`.github/workflows/track-upstream.yml`）把它们更新到两个仓库 `main`
-的最新提交，构建 mini，带沙箱和不带沙箱各跑一遍 `scripts/smoke.sh`，通过后开一个 PR（已有就更新）。
-如果 mini 改编过的 foundry 配置文件，或 `config.js` 依赖的 studio 代码有变化，PR 里会列出来。失败则开
-issue。也可以手动触发，指定别的分支或提交。
+的最新提交，构建 mini，带沙箱和不带沙箱各跑一遍 `scripts/smoke.sh`（第二遍用 8010 端口），通过后直接
+提交到 `main`。如果 mini 改编过的 foundry 配置文件，或 `config.js` 依赖的 studio 代码有变化，提交说明里会
+列出来。失败则开 issue。也可以手动触发，指定别的分支或提交。
 
 自己跑冒烟测试：`scripts/smoke.sh`（需要 `openbkn` 命令行，跑完自动清理）。
 

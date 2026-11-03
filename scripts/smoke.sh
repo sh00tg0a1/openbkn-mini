@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Smoke test for a running openbkn mini started with docker compose: a data
-# source, a network built from it, instance query, Cypher, MCP, and Function
-# and Skill code (or, without the sandbox, their clear refusal).
+# source, a network built from it, instance query, Cypher, MCP, Skill files,
+# and Function and Skill code (or, without the sandbox, their clear refusal).
 #
 # Usage: scripts/smoke.sh [docker compose options, e.g. -p <project>]
-# MINI_URL is the gateway (default http://127.0.0.1:8000). Needs docker
-# compose, the openbkn CLI, curl and python3. It removes what it creates.
+# MINI_URL is the gateway (default http://127.0.0.1:$MINI_PORT, port 8000).
+# Needs docker compose, the openbkn CLI, curl and python3. It removes what it
+# creates.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-URL=${MINI_URL:-http://127.0.0.1:8000}
+URL=${MINI_URL:-http://127.0.0.1:${MINI_PORT:-8000}}
 COMPOSE=(docker compose "$@")
 export BKN_BASE_URL=$URL BKN_TOKEN=mini BKN_SKIP_VERSION_CHECK=1
 TAG=mini-smoke-$(date +%s)
@@ -41,12 +42,12 @@ ENTRIES="(d.get('entries') or d.get('data') or (d if isinstance(d, list) else []
 KN='' CATALOG='' BOX='' SKILL=''
 cleanup() {
   set +e
+  [ -n "$KN" ] && openbkn bkn delete "$KN" -y >/dev/null 2>&1
   if [ -n "$SKILL" ]; then
     cli skill set-status "$SKILL" offline >/dev/null
     cli skill delete "$SKILL" >/dev/null # 500 without an embedding model, still deleted
   fi
   [ -n "$BOX" ] && openbkn toolbox delete "$BOX" -y >/dev/null 2>&1
-  [ -n "$KN" ] && openbkn bkn delete "$KN" -y >/dev/null 2>&1
   [ -n "$CATALOG" ] && openbkn vega catalog delete "$CATALOG" >/dev/null 2>&1
   "${COMPOSE[@]}" exec -T mariadb mariadb -uroot -pmini \
     -e "DROP DATABASE IF EXISTS mini_smoke; DROP USER IF EXISTS 'mini_smoke'@'%';" >/dev/null 2>&1
@@ -148,12 +149,24 @@ else
   grep -q 'without a function executor' <<<"$RESULT" || fail "function without executor: ${RESULT:0:400}"
 fi
 
-step "Skill script"
+step "Skill"
 mkdir -p "$WORK/skill"
 cp -R test/smoke/skill/mini-smoke "$WORK/skill/$TAG"
 sed -i.bak "s/^name: mini-smoke$/name: $TAG/" "$WORK/skill/$TAG/SKILL.md" && rm "$WORK/skill/$TAG/SKILL.md.bak"
 SKILL=$(cli skill register "$WORK/skill/$TAG" | json "d.get('skill_id') or d.get('id')") || fail "register skill"
 cli skill set-status "$SKILL" published >/dev/null || fail "publish skill"
+# The file link the execution factory hands out: studio's browser opens it.
+LINK=$(cli skill content "$SKILL" | json "d['url']") || fail "skill content"
+curl -fs "$LINK" | grep -q "^name: $TAG$" || fail "skill file link does not open here: $LINK"
+# Context Loader opens the same kind of link from inside the container.
+cli bkn capability attach "$KN" --skill "$SKILL" >/dev/null || fail "attach skill"
+skill_doc() {
+  curl -fs -X POST "$URL/api/agent-retrieval/v1/kn/get_skill_content" \
+    -H 'Authorization: Bearer mini' -H 'Content-Type: application/json' \
+    -d "{\"kn_id\":\"$KN\",\"skill_id\":\"$SKILL\"}" | json "d['content']"
+}
+DOC=$(retry skill_doc) || fail "skill content through Context Loader"
+grep -q "^name: $TAG$" <<<"$DOC" || fail "Context Loader read: ${DOC:0:300}"
 RESULT=$(curl -fs -X POST "$URL/api/agent-operator-integration/v1/skills/$SKILL/execute" \
   -H 'Authorization: Bearer mini' -H 'Content-Type: application/json' \
   -d '{"entry_shell":"sh scripts/hello.sh","timeout":60}') || fail "execute skill"

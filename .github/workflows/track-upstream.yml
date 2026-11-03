@@ -1,6 +1,6 @@
 # Moves openbkn mini to the newest bkn-foundry and bkn-studio: builds it, runs
-# the smoke test with and without the sandbox, and opens (or updates) one pull
-# request. A failure opens an issue (or comments on the open one) instead.
+# the smoke test with and without the sandbox, and commits the new versions to
+# main. A failure opens an issue (or comments on the open one) instead.
 name: Track upstream
 
 on:
@@ -17,14 +17,12 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
   issues: write
 
 concurrency:
   group: track-upstream
 
 env:
-  BRANCH: bot/track-upstream
   LABEL: upstream-broken
   GH_REPO: ${{ github.repository }}
 
@@ -118,16 +116,17 @@ jobs:
           docker compose up -d --build
           scripts/smoke.sh
 
-      - name: Smoke test without the sandbox
+      - name: Smoke test without the sandbox, on another port
         if: steps.pick.outputs.changed == 'true'
         working-directory: openbkn-mini
         env:
           MINI_SANDBOX: "off"
+          MINI_PORT: "8010"
         run: |
           docker compose up -d --build mini
           scripts/smoke.sh
 
-      - name: Open or update the pull request
+      - name: Commit to main
         if: steps.pick.outputs.changed == 'true'
         working-directory: openbkn-mini
         env:
@@ -135,19 +134,15 @@ jobs:
           FOUNDRY: ${{ steps.pick.outputs.foundry }}
           STUDIO: ${{ steps.pick.outputs.studio }}
         run: |
-          title="chore: track bkn-foundry ${FOUNDRY:0:9} and bkn-studio ${STUDIO:0:9}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -C "$BRANCH"
           git add -A
-          git commit -m "$title"
-          git push -f origin "$BRANCH"
-          if [ "$(gh pr view "$BRANCH" --json state -q .state 2>/dev/null)" = OPEN ]; then
-            gh pr edit "$BRANCH" --title "$title" --body-file "$RUNNER_TEMP/report.md"
-          else
-            gh pr create --head "$BRANCH" --base main --title "$title" --body-file "$RUNNER_TEMP/report.md"
-          fi
-          url=$(gh pr view "$BRANCH" --json url -q .url)
+          git commit -q -m "chore: track bkn-foundry ${FOUNDRY:0:9} and bkn-studio ${STUDIO:0:9}" \
+            -m "$(cat "$RUNNER_TEMP/report.md")"
+          git pull -q --rebase origin main # main may have moved while the tests ran
+          git push origin HEAD:main
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
+          echo "Committed: $url" >>"$GITHUB_STEP_SUMMARY"
           for n in $(gh issue list --label "$LABEL" --state open --json number -q '.[].number'); do
             gh issue close "$n" --comment "Passing again: $url"
           done
