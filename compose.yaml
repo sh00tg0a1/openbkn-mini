@@ -31,7 +31,7 @@ services:
     restart: unless-stopped
   # Creates or upgrades the schemas of the services mini runs, then exits.
   migrate:
-    image: ghcr.io/openbkn-ai/core-data-migrator:0.2.1-main.20261102103355.sha4ad79e6
+    image: ghcr.io/openbkn-ai/core-data-migrator:0.2.1-main.20261103025212.shabab2eaf
     depends_on:
       mariadb: {condition: service_healthy}
     volumes: ["./docker/migrator-secret.yaml:/etc/data-migrator/secret-config.yaml:ro"]
@@ -56,12 +56,12 @@ services:
       # code does not run). Set it in .env next to this file or on the command line.
       args:
         MINI_SANDBOX: ${MINI_SANDBOX:-on}
-        SANDBOX_IMAGE: ghcr.io/openbkn-ai/sandbox-template-python-basic:0.2.1-main.20261101145631.shad3e6fca
+        SANDBOX_IMAGE: ghcr.io/openbkn-ai/sandbox-template-python-basic:0.2.1-main.20261103004949.sha1f029b6
       # The platform sources mini builds from, pinned to these commits. Set
       # MINI_FOUNDRY_DIR / MINI_STUDIO_SRC to build from local checkouts instead.
       additional_contexts:
-        foundry: ${MINI_FOUNDRY_DIR:-https://github.com/openbkn-ai/bkn-foundry.git#4ad79e6591c9072498037cef4b6d6a9cf4fb50bb}
-        studio: ${MINI_STUDIO_SRC:-https://github.com/openbkn-ai/bkn-studio.git#a4cfb20a8b513ddcece6daeb7566e22a690a7818}
+        foundry: ${MINI_FOUNDRY_DIR:-https://github.com/openbkn-ai/bkn-foundry.git#78011f5919fa65610f7960b21fa40dd35a4bae61}
+        studio: ${MINI_STUDIO_SRC:-https://github.com/openbkn-ai/bkn-studio.git#6e64f2c1c2c64fb4da56d3b13e43cb842f79f9c5}
     depends_on:
       mariadb: {condition: service_healthy}
       opensearch: {condition: service_healthy}
