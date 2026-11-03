@@ -15,7 +15,7 @@ ARG NODE_IMAGE=node:22-alpine
 # 3.11, the official function executor, the BKN SDKs and the common data
 # packages: the tag built from the foundry commit mini pins (or the latest
 # before it). compose.yaml passes the pinned tag; this default matches it.
-ARG SANDBOX_IMAGE=ghcr.io/openbkn-ai/sandbox-template-python-basic:0.2.1-main.20261101145631.shad3e6fca
+ARG SANDBOX_IMAGE=ghcr.io/openbkn-ai/sandbox-template-python-basic:0.2.1-main.20261103004949.sha1f029b6
 ARG REDIS_IMAGE=redis:7
 
 ############################## studio ##############################
