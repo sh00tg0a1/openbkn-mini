@@ -11,6 +11,7 @@ import (
 	"regexp"
 
 	_ "github.com/go-sql-driver/mysql"
+	"gopkg.in/yaml.v3"
 )
 
 // Config says where the parts listen and how the browser reaches mini.
@@ -21,7 +22,39 @@ type Config struct {
 	HydraAdminAddr  string
 	HydraBin        string // the hydra program
 	HydraDir        string // Hydra's database and secret
+	Database        Database
 	Upstreams       Upstreams
+}
+
+// Database is the server bkn-safe keeps its own database on: the one the other
+// services use.
+type Database struct {
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+}
+
+// DatabaseFrom reads the database server from a platform service's config
+// file (depServices.rds), so mini names it in one place.
+func DatabaseFrom(path string) (Database, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Database{}, err
+	}
+	var file struct {
+		DepServices struct {
+			RDS Database `yaml:"rds"`
+		} `yaml:"depServices"`
+	}
+	if err := yaml.Unmarshal(data, &file); err != nil {
+		return Database{}, fmt.Errorf("%s: %w", path, err)
+	}
+	db := file.DepServices.RDS
+	if db.Host == "" || db.Port == "" || db.User == "" {
+		return Database{}, fmt.Errorf("%s: depServices.rds needs host, port and user", path)
+	}
+	return db, nil
 }
 
 // Upstreams are the services bkn-safe asks about the resources it guards.
@@ -37,10 +70,10 @@ func Env(cfg Config) map[string]string {
 		"SAFE_HTTP_ADDR":     cfg.SafeAddr,
 		"SAFE_SEED_ON_START": "true",
 		"SAFE_DB_TYPE":       "MySQL",
-		"SAFE_DB_HOST":       "127.0.0.1",
-		"SAFE_DB_PORT":       "3306",
-		"SAFE_DB_USER":       "root",
-		"SAFE_DB_PASSWORD":   "mini",
+		"SAFE_DB_HOST":       cfg.Database.Host,
+		"SAFE_DB_PORT":       cfg.Database.Port,
+		"SAFE_DB_USER":       cfg.Database.User,
+		"SAFE_DB_PASSWORD":   cfg.Database.Password,
 		"SAFE_DB_NAME":       "safe",
 
 		"SAFE_HYDRA_ADMIN_URL":                     "http://" + cfg.HydraAdminAddr,

@@ -21,6 +21,7 @@ func testConfig(t *testing.T) Config {
 		HydraAdminAddr:  "127.0.0.1:4445",
 		HydraBin:        "hydra",
 		HydraDir:        t.TempDir(),
+		Database:        Database{Host: "127.0.0.1", Port: "3306", User: "root", Password: "from-config"},
 		Upstreams: Upstreams{
 			BKNBackend: "127.0.0.1:13015", ExecutionFactory: "127.0.0.1:9000",
 			VegaBackend: "127.0.0.1:13014", OntologyQuery: "127.0.0.1:13018",
@@ -41,6 +42,8 @@ func TestSetenvKeepsWhatIsAlreadySet(t *testing.T) {
 	for k, want := range map[string]string{
 		"SAFE_DB_PASSWORD":              "mine",
 		"SAFE_LICENSE_SERVER_URL":       "https://license.example",
+		"SAFE_DB_HOST":                  "127.0.0.1",
+		"SAFE_DB_USER":                  "root",
 		"SAFE_HTTP_ADDR":                "127.0.0.1:3000",
 		"SAFE_HYDRA_ADMIN_URL":          "http://127.0.0.1:4445",
 		"SAFE_HYDRA_BROWSER_PUBLIC_URL": "http://127.0.0.1:8010",
@@ -199,5 +202,32 @@ func TestSeedClientsReportsHydraRefusal(t *testing.T) {
 	cfg.HydraAdminAddr = strings.TrimPrefix(admin.URL, "http://")
 	if err := SeedClients(cfg); err == nil || !strings.Contains(err.Error(), "bad client") {
 		t.Fatalf("err = %v, want Hydra's answer", err)
+	}
+}
+
+func TestDatabaseFromReadsTheServiceConfig(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	config := "server: {httpPort: 13015}\ndepServices:\n  rds: {host: 127.0.0.1, port: 3306, user: root, password: from-config, type: MariaDB}\n"
+	if err := os.WriteFile(path, []byte(config), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	db, err := DatabaseFrom(path)
+	want := Database{Host: "127.0.0.1", Port: "3306", User: "root", Password: "from-config"}
+	if err != nil || db != want {
+		t.Fatalf("DatabaseFrom() = %+v, %v; want %+v", db, err, want)
+	}
+	if err := os.WriteFile(path, []byte("depServices: {}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DatabaseFrom(path); err == nil {
+		t.Error("a config without a database server was accepted")
+	}
+}
+
+// The copy of the config mini ships must keep the entry mini reads.
+func TestDatabaseFromReadsMinisOwnConfig(t *testing.T) {
+	db, err := DatabaseFrom("../../dev/run/config/bkn-backend-config.yaml")
+	if err != nil || db.Host == "" || db.Port == "" {
+		t.Fatalf("DatabaseFrom(mini's bkn-backend config) = %+v, %v", db, err)
 	}
 }

@@ -10,6 +10,7 @@ require (
 	github.com/openbkn-ai/bkn-foundry/adp/execution-factory/operator-integration v0.0.0
 	github.com/openbkn-ai/bkn-foundry/bkn-safe/server v0.0.0-00010101000000-000000000000
 	github.com/openbkn-ai/bkn-foundry/vega/vega-backend/server v0.0.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -164,7 +165,6 @@ require (
 	google.golang.org/grpc v1.83.2 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/mysql v1.6.0 // indirect
 	gorm.io/driver/postgres v1.6.0 // indirect
 	gorm.io/driver/sqlserver v1.6.3 // indirect

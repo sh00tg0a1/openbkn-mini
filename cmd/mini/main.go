@@ -93,7 +93,10 @@ func main() {
 	var hydra *safe.Hydra
 	if realSafe {
 		fakeSafeAddr, fakeHydraAddr = "", ""
+		database, err := safe.DatabaseFrom("./config/bkn-backend-config.yaml")
+		must(err, "bkn-safe database server")
 		cfg := safe.Config{
+			Database:        database,
 			PublicURL:       publicURL,
 			SafeAddr:        safeAddr,
 			HydraPublicAddr: hydraPublicAddr,
@@ -106,7 +109,6 @@ func main() {
 		}
 		safe.Setenv(cfg)
 		must(safe.EnsureDatabase(), "bkn-safe database")
-		var err error
 		hydra, err = safe.StartHydra(cfg, func(err error) { fail(fmt.Sprintf("hydra ended: %v", err)) })
 		must(err, "hydra")
 		must(safe.SeedClients(cfg), "OAuth clients")
