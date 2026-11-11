@@ -3,8 +3,9 @@
 [中文](README.zh.md)
 
 OpenBKN for a developer's machine: modeling, data access (Vega), queries including Cypher, search
-(Context Loader MCP), actions, and the execution factory (API / MCP / Skill / Function). Sign-in
-and permissions, metrics, Trace and BKN Agent are not included.
+(Context Loader MCP), actions, and the execution factory (API / MCP / Skill / Function). Metrics,
+Trace and BKN Agent are not included. By default there is no sign-in and everyone is the
+administrator; the platform's own sign-in and permissions can be turned on (below).
 
 The platform itself is [OpenBKN](https://github.com/openbkn-ai): the backend services are
 [bkn-foundry](https://github.com/openbkn-ai/bkn-foundry) and the web pages are
@@ -57,6 +58,37 @@ scripts do not run (debugging and calls fail), and studio hides the function ent
 sandbox runtime page; everything else works as before. Remove the line and run
 `up -d --build` again to bring the sandbox back.
 
+## Sign-in and permissions (optional)
+
+```bash
+echo 'MINI_SAFE=on' >> .env                              # the .env next to compose.yaml
+echo 'BKN_SAFE_INITIAL_PASSWORD=choose-one' >> data/.env # the administrator's first password
+docker compose up -d
+open http://127.0.0.1:8000/studio/                       # sign in as admin
+```
+
+mini then runs the platform's own bkn-safe (users, roles, permissions) in the same process and
+ORY Hydra (OAuth2) next to it, instead of the stand-ins that let everyone in as the administrator.
+Requests need a token and permissions are checked for real. No rebuild is needed; set `MINI_SAFE=off` and `up -d` to go back.
+
+- The password is read only when the administrator is first created. Without
+  `BKN_SAFE_INITIAL_PASSWORD` a random one is written to the log once:
+  `docker compose logs mini | grep initial_password`.
+- Open mini at the address it was started with (`http://127.0.0.1:8000`, or `MINI_PUBLIC_URL`).
+  Sign-in is bound to that address and does not work through another one such as `localhost`.
+- The openbkn CLI signs in as on the platform (`openbkn auth login http://127.0.0.1:8000 -u admin
+  -p ...`). For scripts, `scripts/login.py --password ...` prints a token to use as `BKN_TOKEN`.
+- MCP clients that register themselves (OAuth dynamic client registration) can connect to
+  `http://127.0.0.1:8000/api/agent-retrieval/v1/mcp/` with the address alone and sign the user in
+  in the browser.
+- Users and permissions are kept in a `safe` database in MariaDB; Hydra keeps its clients and
+  sessions in SQLite under `data/hydra`. Keep `data/hydra` together with the database volume.
+- Choose before you build networks. A network created without sign-in shows up for the
+  administrator afterwards but cannot be deleted while sign-in is on (bkn-safe has no proxy
+  account for it); turn sign-in off to manage it. Networks created with sign-in work either way.
+- This is the platform's sign-in served over http for one machine. It does not make mini safe to
+  put on a network.
+
 ## Models (optional)
 
 mini works without models; only semantic search is missing. To add them:
@@ -78,6 +110,7 @@ knowledge network concepts.
 | Path | Contents |
 |---|---|
 | `cmd/mini` | Entry point: stand-ins, then the five services, then the gateway |
+| `internal/safe` | For `MINI_SAFE=on`: bkn-safe's settings and database, the Hydra process, the OAuth clients |
 | `internal/gateway` | The single entry on port 8000: routes to the services, serves studio, writes config.js |
 | `internal/fakes` | Stand-ins: bkn-safe, Hydra, model factory, Trace, the sandbox control plane (in front of the function executor), OSS, NSQ |
 | `internal/forward` | In the container, relays the 127.0.0.1 database and OpenSearch ports to the compose services |
@@ -92,13 +125,13 @@ knowledge network concepts.
 `compose.yaml` pins the bkn-foundry and bkn-studio commits and the platform images built from that
 foundry commit (the migration tool and the sandbox template). Every night a GitHub Actions workflow
 (`.github/workflows/track-upstream.yml`) moves the pins to the newest `main` of both, builds mini,
-runs `scripts/smoke.sh` with and without the sandbox (the second run on port 8010), and commits the
-new pins to `main`. The commit message lists the foundry config files mini keeps adapted copies of
+runs `scripts/smoke.sh` with and without the sandbox (the second run on port 8010) and once more
+with sign-in turned on, and commits the new pins to `main`. The commit message lists the foundry config files mini keeps adapted copies of
 and the studio code its `config.js` depends on, when those changed. A failure opens an issue
 instead. You can also start the workflow by hand, with other branches or commits.
 
 To run the smoke test yourself: `scripts/smoke.sh` (it needs the `openbkn` CLI and cleans up after
-itself).
+itself). Against a mini with sign-in, give it the password: `MINI_PASSWORD=... scripts/smoke.sh`.
 
 ## License
 

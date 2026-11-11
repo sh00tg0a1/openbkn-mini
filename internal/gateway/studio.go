@@ -68,31 +68,39 @@ type studioUser struct {
 }
 
 type studioRuntime struct {
-	// Hosted mode turns off studio's OAuth gate: there is no login in mini.
-	Mode             string         `json:"mode"`
+	// Hosted mode turns off studio's OAuth gate, for mini without a login.
+	// Left out, studio signs the user in and reads their permissions itself.
+	Mode             string         `json:"mode,omitempty"`
 	HiddenNavigation []string       `json:"hiddenNavigation"`
 	Features         map[string]any `json:"features,omitempty"`
-	CurrentUser      studioUser     `json:"currentUser"`
+	CurrentUser      *studioUser    `json:"currentUser,omitempty"`
 }
+
+// safeHiddenNavigation are entries that a signed-in administrator's
+// permissions would show, for services mini does not run: models are set in
+// models.json, not in the platform's model management.
+var safeHiddenNavigation = []string{"model-resource-management", "model-statistics"}
 
 // studioConfigJS is studio's config.js: its runtime settings and the user
 // menu style.
 func studioConfigJS(opts Options) string {
-	rt := studioRuntime{
-		Mode:             "hosted",
-		HiddenNavigation: append([]string{}, hiddenNavigation...),
-		CurrentUser: studioUser{
-			// The platform's built-in super administrator, whom the stand-ins answer as.
+	rt := studioRuntime{HiddenNavigation: append([]string{}, hiddenNavigation...)}
+	if opts.Safe {
+		rt.HiddenNavigation = append(rt.HiddenNavigation, safeHiddenNavigation...)
+	} else {
+		rt.Mode = "hosted"
+		rt.CurrentUser = &studioUser{
 			ID:          "266c6a42-6131-4d62-8f39-853e7093701c",
 			Name:        "admin",
 			Roles:       []string{},
 			Permissions: append([]string{}, basePermissions...),
-		},
+		}
 	}
 	if opts.Sandbox {
-		rt.CurrentUser.Permissions = append(rt.CurrentUser.Permissions, sandboxPermissions...)
+		if rt.CurrentUser != nil {
+			rt.CurrentUser.Permissions = append(rt.CurrentUser.Permissions, sandboxPermissions...)
+		}
 	} else {
-		// Without an executor nothing runs Function code.
 		rt.HiddenNavigation = append(rt.HiddenNavigation, "functions")
 		rt.Features = map[string]any{"executionFactoryLab": map[string]any{"function": false}}
 	}
@@ -100,5 +108,9 @@ func studioConfigJS(opts Options) string {
 	if err != nil {
 		panic(err) // plain data: cannot fail
 	}
-	return fmt.Sprintf("window.__BKN_STUDIO_RUNTIME__ = %s;\n%s", data, userMenuScript)
+	js := fmt.Sprintf("window.__BKN_STUDIO_RUNTIME__ = %s;\n", data)
+	if opts.Safe {
+		return js // the account and sign-out entries are real
+	}
+	return js + userMenuScript
 }

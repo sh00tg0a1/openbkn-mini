@@ -58,3 +58,35 @@ func TestStudioConfigWithoutSandboxHidesFunctions(t *testing.T) {
 		t.Error("user menu style missing")
 	}
 }
+
+func TestStudioConfigWithSafeLeavesSignInToStudio(t *testing.T) {
+	js := studioConfigJS(Options{Sandbox: true, Safe: true})
+	rt := parseStudioConfig(t, js)
+	if rt.Mode != "" || rt.CurrentUser != nil {
+		t.Errorf("mode %q, user %v: studio must sign the user in itself", rt.Mode, rt.CurrentUser)
+	}
+	if strings.Contains(js, `"mode"`) || strings.Contains(js, `"currentUser"`) {
+		t.Error("config.js sets mode or currentUser")
+	}
+	if strings.Contains(js, "console-user-menu-version") {
+		t.Error("account and sign-out are hidden although they work")
+	}
+	for _, key := range []string{"bkn-project", "model-resource-management"} {
+		if !slices.Contains(rt.HiddenNavigation, key) {
+			t.Errorf("%s shown although mini does not run it", key)
+		}
+	}
+	if slices.Contains(rt.HiddenNavigation, "functions") {
+		t.Error("functions hidden although an executor runs them")
+	}
+}
+
+func TestStudioConfigWithSafeAndNoSandboxHidesFunctions(t *testing.T) {
+	js := studioConfigJS(Options{Safe: true})
+	if rt := parseStudioConfig(t, js); !slices.Contains(rt.HiddenNavigation, "functions") {
+		t.Error("functions shown without an executor")
+	}
+	if !strings.Contains(js, `"function": false`) {
+		t.Error("lab function capability not turned off")
+	}
+}

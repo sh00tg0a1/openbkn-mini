@@ -23,8 +23,8 @@ const (
 
 // Config holds listen addresses and data files for the fakes.
 type Config struct {
-	SafeAddr     string        // bkn-safe
-	HydraAddr    string        // Hydra admin
+	SafeAddr     string        // bkn-safe; empty when mini runs the real one
+	HydraAddr    string        // Hydra admin; empty when mini runs the real one
 	ModelAddr    string        // mf-model-api and mf-model-manager
 	NSQAddr      string        // nsqd HTTP publish
 	TraceAddr    string        // BKN Trace core
@@ -38,14 +38,10 @@ type Config struct {
 	RegistryFile string        // bkn-safe authorization-registry.json
 }
 
-// Start launches every fake in its own goroutine.
+// Start launches every fake in its own goroutine. A fake with no address is
+// not started.
 func Start(cfg Config) error {
-	reg, err := loadRegistry(cfg.RegistryFile)
-	if err != nil {
-		return err
-	}
 	servers := map[string]http.Handler{
-		cfg.SafeAddr:    logged("safe", newSafe(reg)),
 		cfg.HydraAddr:   logged("hydra", newHydra()),
 		cfg.ModelAddr:   logged("model", newModel(cfg.Models, cfg.DirectModels)),
 		cfg.NSQAddr:     logged("nsq", newNSQ()),
@@ -53,6 +49,14 @@ func Start(cfg Config) error {
 		cfg.SandboxAddr: logged("sandbox", newSandbox(cfg.Sandbox)),
 		cfg.OSSAddr:     logged("oss", newOSS(cfg.OSSDir, cfg.PublicURL)),
 	}
+	if cfg.SafeAddr != "" {
+		reg, err := loadRegistry(cfg.RegistryFile)
+		if err != nil {
+			return err
+		}
+		servers[cfg.SafeAddr] = logged("safe", newSafe(reg))
+	}
+	delete(servers, "")
 	for addr, h := range servers {
 		srv := &http.Server{Addr: addr, Handler: h, ReadHeaderTimeout: 10 * time.Second}
 		go func(addr string) {

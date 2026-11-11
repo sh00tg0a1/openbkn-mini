@@ -5,6 +5,8 @@
 #
 # Usage: scripts/smoke.sh [docker compose options, e.g. -p <project>]
 # MINI_URL is the gateway (default http://127.0.0.1:$MINI_PORT, port 8000).
+# A mini running with MINI_SAFE=on needs a sign-in: MINI_PASSWORD (and
+# MINI_ACCOUNT, default admin).
 # Needs docker compose, the openbkn CLI, curl and python3. It removes what it
 # creates.
 set -euo pipefail
@@ -12,6 +14,7 @@ cd "$(dirname "$0")/.."
 
 URL=${MINI_URL:-http://127.0.0.1:${MINI_PORT:-8000}}
 COMPOSE=(docker compose "$@")
+# Without sign-in any token is the administrator's.
 export BKN_BASE_URL=$URL BKN_TOKEN=mini BKN_SKIP_VERSION_CHECK=1
 TAG=mini-smoke-$(date +%s)
 WORK=$(mktemp -d)
@@ -42,7 +45,10 @@ ENTRIES="(d.get('entries') or d.get('data') or (d if isinstance(d, list) else []
 KN='' CATALOG='' BOX='' SKILL=''
 cleanup() {
   set +e
-  [ -n "$KN" ] && openbkn bkn delete "$KN" -y >/dev/null 2>&1
+  # With sign-in, a network answers 409 until its proxy grants have synced.
+  if [ -n "$KN" ] && ! retry openbkn bkn delete "$KN" -y >/dev/null; then
+    echo "warning: network $KN was not deleted" >&2
+  fi
   if [ -n "$SKILL" ]; then
     cli skill set-status "$SKILL" offline >/dev/null
     cli skill delete "$SKILL" >/dev/null # 500 without an embedding model, still deleted
@@ -61,12 +67,30 @@ for _ in $(seq 60); do
   sleep 2
 done
 curl -fs -o /dev/null "$URL/studio/" || fail "studio is not served at $URL"
-if curl -fs "$URL/studio/config.js" | grep -q 'execution-factory:function:create'; then
-  SANDBOX=on
-else
+CONFIG=$(curl -fs "$URL/studio/config.js") || fail "no studio config.js"
+if grep -q '"function": false' <<<"$CONFIG"; then
   SANDBOX=off
+else
+  SANDBOX=on
 fi
-echo "   sandbox: $SANDBOX"
+if grep -q '"mode": "hosted"' <<<"$CONFIG"; then
+  SAFE=off
+else
+  SAFE=on
+fi
+echo "   sandbox: $SANDBOX, sign-in: $SAFE"
+
+if [ "$SAFE" = on ]; then
+  step "sign in"
+  [ -n "${MINI_PASSWORD:-}" ] || fail "this mini needs a sign-in: set MINI_PASSWORD"
+  code=$(curl -s -o /dev/null -w '%{http_code}' -H 'Authorization: Bearer made-up' "$URL/api/bkn-backend/v1/knowledge-networks?limit=1")
+  [ "$code" = 401 ] || fail "a made-up token got $code from bkn-backend, want 401"
+  code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$URL/api/safe/v1/authz/checks" -d '{}')
+  [ "$code" = 404 ] || fail "bkn-safe's internal API answers $code through the gateway, want 404"
+  BKN_TOKEN=$(python3 scripts/login.py --url "$URL" --account "${MINI_ACCOUNT:-admin}" --password "$MINI_PASSWORD" 2>>"$LOG") ||
+    fail "sign in as ${MINI_ACCOUNT:-admin}"
+  export BKN_TOKEN
+fi
 
 step "data source"
 "${COMPOSE[@]}" exec -T mariadb mariadb -uroot -pmini <test/smoke/data.sql || fail "load test data"
@@ -105,7 +129,7 @@ parts=$(retry cypher_parts) || fail "Cypher"
 
 step "MCP"
 MCP="$URL/api/agent-retrieval/v1/mcp/"
-H=(-H 'Authorization: Bearer mini' -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream')
+H=(-H "Authorization: Bearer $BKN_TOKEN" -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream')
 SID=$(curl -fs -D - -o /dev/null -X POST "$MCP" "${H[@]}" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"mini-smoke","version":"1"}}}' |
   tr -d '\r' | awk 'tolower($1) == "mcp-session-id:" {print $2}')
@@ -162,13 +186,13 @@ curl -fs "$LINK" | grep -q "^name: $TAG$" || fail "skill file link does not open
 cli bkn capability attach "$KN" --skill "$SKILL" >/dev/null || fail "attach skill"
 skill_doc() {
   curl -fs -X POST "$URL/api/agent-retrieval/v1/kn/get_skill_content" \
-    -H 'Authorization: Bearer mini' -H 'Content-Type: application/json' \
+    -H "Authorization: Bearer $BKN_TOKEN" -H 'Content-Type: application/json' \
     -d "{\"kn_id\":\"$KN\",\"skill_id\":\"$SKILL\"}" | json "d['content']"
 }
 DOC=$(retry skill_doc) || fail "skill content through Context Loader"
 grep -q "^name: $TAG$" <<<"$DOC" || fail "Context Loader read: ${DOC:0:300}"
 RESULT=$(curl -fs -X POST "$URL/api/agent-operator-integration/v1/skills/$SKILL/execute" \
-  -H 'Authorization: Bearer mini' -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $BKN_TOKEN" -H 'Content-Type: application/json' \
   -d '{"entry_shell":"sh scripts/hello.sh","timeout":60}') || fail "execute skill"
 if [ "$SANDBOX" = on ]; then
   grep -q 'pandas' <<<"$RESULT" || fail "skill script: ${RESULT:0:400}"
