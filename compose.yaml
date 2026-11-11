@@ -72,6 +72,10 @@ services:
     ports: ["127.0.0.1:${MINI_PORT:-8000}:${MINI_PORT:-8000}"]
     environment:
       MINI_GATEWAY_ADDR: 0.0.0.0:${MINI_PORT:-8000}
+      # on: the platform's own sign-in and permissions (bkn-safe and Hydra)
+      # instead of the stand-ins that let everyone in as admin. Set it in .env
+      # next to this file; no rebuild needed.
+      MINI_SAFE: ${MINI_SAFE:-off}
       MINI_PUBLIC_URL: ${MINI_PUBLIC_URL:-http://127.0.0.1:${MINI_PORT:-8000}}
     # The execution factory calls Function tools at this fixed address.
     extra_hosts: ["agent-operator-integration:127.0.0.1"]

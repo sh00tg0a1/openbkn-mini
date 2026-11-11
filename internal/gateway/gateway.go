@@ -19,9 +19,17 @@ type Route struct {
 	Upstream string // host:port
 }
 
-// DefaultRoutes lists the platform API prefixes mini serves.
-func DefaultRoutes() []Route {
-	return []Route{
+// DefaultRoutes lists the platform API prefixes mini serves with the bkn-safe
+// stand-in.
+func DefaultRoutes() []Route { return Routes(false) }
+
+// Routes lists the paths mini serves. A prefix ending in "/" covers everything
+// under it; any other is that one path. With safe, sign-in and permissions are
+// the platform's own bkn-safe and Hydra, and the gateway opens the paths the
+// platform's gateway opens for them, no more: bkn-safe's other APIs take no
+// token and stay inside mini.
+func Routes(safe bool) []Route {
+	routes := []Route{
 		{"/api/bkn-backend/", "127.0.0.1:13015"},
 		{"/api/ontology-manager/", "127.0.0.1:13015"}, // legacy name, rewritten to /api/bkn-backend/
 		{"/api/ontology-query/", "127.0.0.1:13018"},
@@ -30,10 +38,53 @@ func DefaultRoutes() []Route {
 		{"/api/agent-operator-integration/", "127.0.0.1:9000"},
 		{"/api/capabilities-lab/", "127.0.0.1:9000"},
 		{"/mini-oss/", "127.0.0.1:8095"},
-		{"/api/safe/", "127.0.0.1:3000"},
 		{"/api/mf-model-api/", "127.0.0.1:9898"},
 		{"/api/mf-model-manager/", "127.0.0.1:9898"},
 	}
+	if !safe {
+		return append(routes, Route{"/api/safe/", safeUpstream})
+	}
+	for _, path := range safePaths {
+		routes = append(routes, Route{path, safeUpstream}, Route{path + "/", safeUpstream})
+	}
+	for _, path := range hydraPaths {
+		routes = append(routes, Route{path, hydraPublicUpstream})
+	}
+	return routes
+}
+
+const (
+	safeUpstream        = "127.0.0.1:3000"
+	hydraPublicUpstream = "127.0.0.1:4444"
+)
+
+// safePaths are bkn-safe's pages and token-checked APIs, as the platform's
+// gateway exposes them (bkn-safe chart, ingress.paths).
+var safePaths = []string{
+	"/login",
+	"/sso/login",
+	"/sso/callback",
+	"/consent",
+	"/device",
+	"/change-password",
+	"/api/safe/v1/auth/change-password",
+	"/api/safe/v1/auth/token-exchange",
+	"/api/safe/v1/admin",
+	"/api/safe/v1/me",
+	"/api/safe/v1/permission-requests",
+	"/api/safe/v1/capabilities",
+	"/api/safe/v1/oauth/register",
+	"/.well-known/oauth-authorization-server",
+	"/.well-known/oauth-protected-resource",
+}
+
+// hydraPaths are Hydra's public OAuth2 and OpenID Connect endpoints (bkn-safe
+// chart, ingress.hydraPublicPaths).
+var hydraPaths = []string{
+	"/oauth2/",
+	"/.well-known/openid-configuration",
+	"/.well-known/jwks.json",
+	"/userinfo",
 }
 
 // Options are what the gateway needs to know about how mini runs.
@@ -42,6 +93,9 @@ type Options struct {
 	// Studio then shows functions and the sandbox runtime page, as the
 	// community edition does.
 	Sandbox bool
+	// Safe is true when mini runs the platform's sign-in and permissions.
+	// Studio then signs the user in and asks bkn-safe what they may do.
+	Safe bool
 }
 
 // Start serves the gateway on addr in a goroutine.

@@ -1,5 +1,5 @@
 # Moves openbkn mini to the newest bkn-foundry and bkn-studio: builds it, runs
-# the smoke test with and without the sandbox, and commits the new versions to
+# the smoke test with and without the sandbox and with sign-in, and commits the new versions to
 # main. A failure opens an issue (or comments on the open one) instead.
 name: Track upstream
 
@@ -124,6 +124,20 @@ jobs:
           MINI_PORT: "8010"
         run: |
           docker compose up -d --build mini
+          scripts/smoke.sh
+
+      - name: Smoke test with sign-in (the platform's bkn-safe and Hydra)
+        if: steps.pick.outputs.changed == 'true'
+        working-directory: openbkn-mini
+        env:
+          MINI_SANDBOX: "off"
+          MINI_PORT: "8010"
+          MINI_SAFE: "on"
+          MINI_PASSWORD: mini-smoke-password
+        run: |
+          mkdir -p data
+          echo "BKN_SAFE_INITIAL_PASSWORD=$MINI_PASSWORD" >>data/.env
+          docker compose up -d mini
           scripts/smoke.sh
 
       - name: Commit to main

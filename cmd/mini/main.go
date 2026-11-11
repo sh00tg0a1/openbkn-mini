@@ -19,22 +19,27 @@ import (
 	oqapp "github.com/openbkn-ai/bkn-foundry/adp/bkn/ontology-query/server/app"
 	clapp "github.com/openbkn-ai/bkn-foundry/adp/context-loader/agent-retrieval/server/app"
 	efapp "github.com/openbkn-ai/bkn-foundry/adp/execution-factory/operator-integration/server/app"
+	safeapp "github.com/openbkn-ai/bkn-foundry/bkn-safe/server/app"
 	vegaapp "github.com/openbkn-ai/bkn-foundry/vega/vega-backend/server/app"
 
 	"github.com/sh00tg0a1/openbkn-mini/internal/fakes"
 	"github.com/sh00tg0a1/openbkn-mini/internal/forward"
 	"github.com/sh00tg0a1/openbkn-mini/internal/gateway"
+	"github.com/sh00tg0a1/openbkn-mini/internal/safe"
 )
 
 // Where mini's stand-ins listen: the platform configs under dev/run point here.
+// With MINI_SAFE=on the platform's own bkn-safe and Hydra listen at safeAddr,
+// hydraAddr and hydraPublicAddr instead of the two stand-ins.
 const (
-	safeAddr    = "127.0.0.1:3000"
-	hydraAddr   = "127.0.0.1:4445"
-	modelAddr   = "127.0.0.1:9898"
-	nsqAddr     = "127.0.0.1:4151"
-	traceAddr   = "127.0.0.1:8081"
-	sandboxAddr = "127.0.0.1:8090"
-	ossAddr     = "127.0.0.1:8095"
+	safeAddr        = "127.0.0.1:3000"
+	hydraAddr       = "127.0.0.1:4445"
+	hydraPublicAddr = "127.0.0.1:4444"
+	modelAddr       = "127.0.0.1:9898"
+	nsqAddr         = "127.0.0.1:4151"
+	traceAddr       = "127.0.0.1:8081"
+	sandboxAddr     = "127.0.0.1:8090"
+	ossAddr         = "127.0.0.1:8095"
 )
 
 // Where the platform services listen, as their configs say.
@@ -81,16 +86,43 @@ func main() {
 	must(setYAMLBool("./config/bkn-backend-config.yaml", "defaultSmallModelEnabled", hasEmbedding(directModels)),
 		"bkn-backend model flag")
 
+	// The platform's own sign-in and permissions, or their stand-ins.
+	realSafe := safeOn()
+	publicURL := env("MINI_PUBLIC_URL", "http://127.0.0.1:8000")
+	fakeSafeAddr, fakeHydraAddr := safeAddr, hydraAddr
+	var hydra *safe.Hydra
+	if realSafe {
+		fakeSafeAddr, fakeHydraAddr = "", ""
+		cfg := safe.Config{
+			PublicURL:       publicURL,
+			SafeAddr:        safeAddr,
+			HydraPublicAddr: hydraPublicAddr,
+			HydraAdminAddr:  hydraAddr,
+			HydraBin:        env("MINI_HYDRA_BIN", "hydra"),
+			HydraDir:        env("MINI_HYDRA_DIR", "./hydra-data"),
+			Upstreams: safe.Upstreams{
+				BKNBackend: bknAddr, ExecutionFactory: efAddr, VegaBackend: vegaAddr, OntologyQuery: oqAddr,
+			},
+		}
+		safe.Setenv(cfg)
+		must(safe.EnsureDatabase(), "bkn-safe database")
+		var err error
+		hydra, err = safe.StartHydra(cfg, func(err error) { fail(fmt.Sprintf("hydra ended: %v", err)) })
+		must(err, "hydra")
+		must(safe.SeedClients(cfg), "OAuth clients")
+		logf("hydra listening on %s (public) and %s (admin)", hydraPublicAddr, hydraAddr)
+	}
+
 	must(fakes.Start(fakes.Config{
-		SafeAddr:    safeAddr,
-		HydraAddr:   hydraAddr,
+		SafeAddr:    fakeSafeAddr,
+		HydraAddr:   fakeHydraAddr,
 		ModelAddr:   modelAddr,
 		NSQAddr:     nsqAddr,
 		TraceAddr:   traceAddr,
 		SandboxAddr: sandboxAddr,
 		OSSAddr:     ossAddr,
 		OSSDir:      env("MINI_OSS_DIR", "./oss-data"),
-		PublicURL:   env("MINI_PUBLIC_URL", "http://127.0.0.1:8000"),
+		PublicURL:   publicURL,
 		Models: fakes.ModelUpstream{
 			BaseURL:  os.Getenv("MINI_MODEL_UPSTREAM"),
 			AppKey:   os.Getenv("MINI_MODEL_UPSTREAM_APPKEY"),
@@ -103,11 +135,21 @@ func main() {
 		},
 		RegistryFile: env("MINI_AUTHZ_REGISTRY", "./authorization-registry.json"),
 	}), "start fakes")
-	for _, addr := range []string{safeAddr, hydraAddr, modelAddr, nsqAddr, traceAddr, sandboxAddr, ossAddr} {
-		waitListening("fake", addr, 10*time.Second)
+	for _, addr := range []string{fakeSafeAddr, fakeHydraAddr, modelAddr, nsqAddr, traceAddr, sandboxAddr, ossAddr} {
+		if addr != "" {
+			waitListening("fake", addr, 10*time.Second)
+		}
 	}
 
+	// Every service is booted before the first one runs: a service installs the
+	// licence gate while it boots, and none may once another has started.
 	logf("booting services")
+	var safeApp *safeapp.App
+	if realSafe {
+		var err error
+		safeApp, err = safeapp.Boot(safeapp.Options{})
+		must(err, "bkn-safe boot")
+	}
 	vega, err := vegaapp.Boot(vegaapp.Options{})
 	must(err, "vega boot")
 	bkn := bknapp.Boot(bknapp.Options{})
@@ -117,7 +159,11 @@ func main() {
 	ef, err := efapp.Boot(efapp.Options{})
 	must(err, "execution-factory boot")
 
-	// Vega first: bkn-backend calls it during Run and panics if it is down.
+	// bkn-safe first: the others ask it for permissions as soon as they run.
+	if realSafe {
+		start("bkn-safe", func() { must(safeApp.Run(), "bkn-safe run") }, safeAddr)
+	}
+	// Vega next: bkn-backend calls it during Run and panics if it is down.
 	start("vega", func() { must(vega.Run(), "vega run") }, vegaAddr)
 	start("ontology-query", oq.Run, oqAddr)
 	start("context-loader", func() { must(cl.Run(), "context-loader run") }, clAddr)
@@ -126,9 +172,13 @@ func main() {
 
 	sandbox := os.Getenv("MINI_EXECUTOR_URL") != ""
 	logf("function executor: %v", sandbox)
-	gateway.Start(gwAddr, gateway.DefaultRoutes(), gateway.Options{Sandbox: sandbox})
+	gateway.Start(gwAddr, gateway.Routes(realSafe), gateway.Options{Sandbox: sandbox, Safe: realSafe})
 	waitListening("gateway", gwAddr, 10*time.Second)
-	logf("all services started; open %s", env("MINI_PUBLIC_URL", "http://127.0.0.1:8000"))
+	if realSafe {
+		logf("all services started; open %s and sign in as admin", publicURL)
+	} else {
+		logf("all services started; open %s", publicURL)
+	}
 
 	// Each service also listens for these signals and shuts its own server
 	// down; give them a moment, then end the process.
@@ -136,8 +186,19 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
 	logf("shutting down")
+	hydra.Stop()
 	time.Sleep(3 * time.Second)
 	os.Exit(0)
+}
+
+// safeOn reports whether mini runs the platform's own sign-in and permissions
+// (bkn-safe and Hydra) instead of the stand-ins that let everyone in as admin.
+func safeOn() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("MINI_SAFE"))) {
+	case "on", "true", "1":
+		return true
+	}
+	return false
 }
 
 // healthcheck is the container's health probe: the gateway serves studio.
@@ -177,6 +238,11 @@ func insideListeners() map[string]string {
 		bknAddr:          "bkn-backend",
 		efAddr:           "execution-factory",
 		"127.0.0.1:6379": "Redis", // started by docker/entrypoint.sh
+	}
+	if safeOn() {
+		inside[safeAddr] = "bkn-safe"
+		inside[hydraAddr] = "Hydra (admin)"
+		inside[hydraPublicAddr] = "Hydra (public)"
 	}
 	if u, err := url.Parse(os.Getenv("MINI_EXECUTOR_URL")); err == nil && u.Host != "" {
 		inside[u.Host] = "the function executor"
