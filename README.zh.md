@@ -97,10 +97,10 @@ docker compose restart mini
 | 路径 | 内容 |
 |---|---|
 | `cmd/mini` | 入口：依次启动替身、5 个服务、网关 |
-| `internal/safe` | `MINI_SAFE=on` 时用：bkn-safe 的配置与数据库、Hydra 进程、OAuth 客户端 |
-| `internal/gateway` | 统一入口 8000：转发到各服务，托管 studio，生成 config.js |
-| `internal/fakes` | 替身：bkn-safe、Hydra、模型工厂、Trace、沙箱控制面（后面接函数执行器）、OSS、NSQ |
-| `internal/forward` | 容器里把 127.0.0.1 上的数据库、OpenSearch 端口转到 compose 服务 |
+| `pkg/safe` | `MINI_SAFE=on` 时用：bkn-safe 的配置与数据库、Hydra 进程、OAuth 客户端 |
+| `pkg/gateway` | 统一入口 8000：转发到各服务，托管 studio，生成 config.js |
+| `pkg/fakes` | 替身：bkn-safe、Hydra、模型工厂、Trace、沙箱控制面（后面接函数执行器）、OSS、NSQ |
+| `pkg/forward` | 容器里把 127.0.0.1 上的数据库、OpenSearch 端口转到 compose 服务 |
 | `docker/` | 镜像、启动脚本、迁移工具的连接配置 |
 | `dev/` | 在本机直接跑 mini 用：依赖服务的 compose 文件和运行目录（配置） |
 | `scripts/smoke.sh` | 对运行中的 mini 做冒烟测试：数据源、建网、查询、Cypher、MCP、函数、Skill |

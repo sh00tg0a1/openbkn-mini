@@ -22,10 +22,10 @@ import (
 	safeapp "github.com/openbkn-ai/bkn-foundry/bkn-safe/server/app"
 	vegaapp "github.com/openbkn-ai/bkn-foundry/vega/vega-backend/server/app"
 
-	"github.com/sh00tg0a1/openbkn-mini/internal/fakes"
-	"github.com/sh00tg0a1/openbkn-mini/internal/forward"
-	"github.com/sh00tg0a1/openbkn-mini/internal/gateway"
-	"github.com/sh00tg0a1/openbkn-mini/internal/safe"
+	"github.com/sh00tg0a1/openbkn-mini/pkg/fakes"
+	"github.com/sh00tg0a1/openbkn-mini/pkg/forward"
+	"github.com/sh00tg0a1/openbkn-mini/pkg/gateway"
+	"github.com/sh00tg0a1/openbkn-mini/pkg/safe"
 )
 
 // Where mini's stand-ins listen: the platform configs under dev/run point here.
