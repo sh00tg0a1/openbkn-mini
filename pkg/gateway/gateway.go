@@ -96,6 +96,10 @@ type Options struct {
 	// Safe is true when mini runs the platform's sign-in and permissions.
 	// Studio then signs the user in and asks bkn-safe what they may do.
 	Safe bool
+	// Shown are navigation keys to show although mini hides them, for a
+	// build that also runs their services (an Enterprise mini runs BKN
+	// project and Trace, for example).
+	Shown []string
 }
 
 // Start serves the gateway on addr in a goroutine.

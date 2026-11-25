@@ -90,3 +90,17 @@ func TestStudioConfigWithSafeAndNoSandboxHidesFunctions(t *testing.T) {
 		t.Error("lab function capability not turned off")
 	}
 }
+
+func TestStudioConfigShowsWhatTheCallerRuns(t *testing.T) {
+	rt := parseStudioConfig(t, studioConfigJS(Options{Safe: true, Sandbox: true, Shown: []string{"bkn-project", "observability"}}))
+	for _, key := range []string{"bkn-project", "observability"} {
+		if slices.Contains(rt.HiddenNavigation, key) {
+			t.Errorf("%s hidden although the caller runs it", key)
+		}
+	}
+	for _, key := range []string{"experience-agent", "model-resource-management"} {
+		if !slices.Contains(rt.HiddenNavigation, key) {
+			t.Errorf("%s shown although nobody asked for it", key)
+		}
+	}
+}
