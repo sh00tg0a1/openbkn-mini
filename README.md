@@ -20,6 +20,8 @@ Functions and Skill scripts run in the platform's own executor, but without the 
 edition's per-session containers: they share one Python environment in the mini container and are
 not isolated from it. The image is built on the platform's sandbox template image, so it is large
 (about 1.7 GB). If you do not need Functions or Skill scripts, leave the sandbox out (below).
+`MINI_EXECUTOR=external` (with `MINI_EXECUTOR_URL` and `MINI_SANDBOX_ADDR`) runs the executor in a
+container of its own instead; the compose file here does not set that up.
 
 ## Start
 
@@ -110,10 +112,10 @@ knowledge network concepts.
 | Path | Contents |
 |---|---|
 | `cmd/mini` | Entry point: stand-ins, then the five services, then the gateway |
-| `internal/safe` | For `MINI_SAFE=on`: bkn-safe's settings and database, the Hydra process, the OAuth clients |
-| `internal/gateway` | The single entry on port 8000: routes to the services, serves studio, writes config.js |
-| `internal/fakes` | Stand-ins: bkn-safe, Hydra, model factory, Trace, the sandbox control plane (in front of the function executor), OSS, NSQ |
-| `internal/forward` | In the container, relays the 127.0.0.1 database and OpenSearch ports to the compose services |
+| `pkg/safe` | For `MINI_SAFE=on`: bkn-safe's settings and database, the Hydra process, the OAuth clients |
+| `pkg/gateway` | The single entry on port 8000: routes the services' public APIs (what the platform's ingress opens; their internal routes stay inside), serves studio, writes config.js |
+| `pkg/fakes` | Stand-ins: bkn-safe, Hydra, model factory, Trace, the sandbox control plane (in front of the function executor), OSS, NSQ |
+| `pkg/forward` | In the container, relays the 127.0.0.1 database and OpenSearch ports to the compose services |
 | `docker/` | Image, entry script and the migration tool's connection settings |
 | `dev/` | For running mini directly on the host: a compose file for its dependencies and the run directory (configs) |
 | `scripts/smoke.sh` | Smoke test against a running mini: data source, network, query, Cypher, MCP, Function, Skill |

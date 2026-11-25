@@ -42,7 +42,7 @@ WORKDIR /src/openbkn-mini
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY cmd ./cmd
-COPY internal ./internal
+COPY pkg ./pkg
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 go build -trimpath -tags timetzdata -ldflags "-s -w" -o /out/mini ./cmd/mini
 

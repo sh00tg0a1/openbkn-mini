@@ -23,23 +23,40 @@ type Route struct {
 // stand-in.
 func DefaultRoutes() []Route { return Routes(false) }
 
+// Public routes each path, and everything under it, to upstream: how the
+// platform's ingress opens a service's public API (its chart's ingress.paths).
+func Public(upstream string, paths ...string) []Route {
+	routes := make([]Route, 0, 2*len(paths))
+	for _, p := range paths {
+		routes = append(routes, Route{p, upstream}, Route{p + "/", upstream})
+	}
+	return routes
+}
+
+// legacyBKN is bkn-backend's old name, rewritten to /api/bkn-backend/.
+const legacyBKN = "/api/ontology-manager/"
+
 // Routes lists the paths mini serves. A prefix ending in "/" covers everything
-// under it; any other is that one path. With safe, sign-in and permissions are
-// the platform's own bkn-safe and Hydra, and the gateway opens the paths the
-// platform's gateway opens for them, no more: bkn-safe's other APIs take no
-// token and stay inside mini.
+// under it; any other is that one path. Each platform service opens only its
+// public API versions, as the platform's ingress does: its internal routes
+// (/in/..., /internal-v1/...) take the caller's identity from request headers
+// instead of a token, and stay inside mini. With safe, sign-in and permissions
+// are the platform's own bkn-safe and Hydra, and the gateway opens the paths
+// the platform's gateway opens for them, no more: bkn-safe's other APIs take
+// no token either.
 func Routes(safe bool) []Route {
-	routes := []Route{
-		{"/api/bkn-backend/", "127.0.0.1:13015"},
-		{"/api/ontology-manager/", "127.0.0.1:13015"}, // legacy name, rewritten to /api/bkn-backend/
-		{"/api/ontology-query/", "127.0.0.1:13018"},
-		{"/api/vega-backend/", "127.0.0.1:13014"},
-		{"/api/agent-retrieval/", "127.0.0.1:30779"},
-		{"/api/agent-operator-integration/", "127.0.0.1:9000"},
-		{"/api/capabilities-lab/", "127.0.0.1:9000"},
-		{"/mini-oss/", "127.0.0.1:8095"},
-		{"/api/mf-model-api/", "127.0.0.1:9898"},
-		{"/api/mf-model-manager/", "127.0.0.1:9898"},
+	var routes []Route
+	for _, set := range [][]Route{
+		Public("127.0.0.1:13015", "/api/bkn-backend/v1", "/api/bkn-backend/v2", legacyBKN+"v1", legacyBKN+"v2"),
+		Public("127.0.0.1:13018", "/api/ontology-query/v1", "/api/ontology-query/v2"),
+		Public("127.0.0.1:13014", "/api/vega-backend/v1"),
+		Public("127.0.0.1:30779", "/api/agent-retrieval/v1"),
+		Public("127.0.0.1:9000", "/api/agent-operator-integration/v1", "/api/capabilities-lab/v1"),
+		// The model factory, as the platform opens it: the whole service.
+		Public("127.0.0.1:9898", "/api/mf-model-api", "/api/mf-model-manager"),
+		{{"/mini-oss/", "127.0.0.1:8095"}},
+	} {
+		routes = append(routes, set...)
 	}
 	if !safe {
 		return append(routes, Route{"/api/safe/", safeUpstream})
@@ -96,6 +113,10 @@ type Options struct {
 	// Safe is true when mini runs the platform's sign-in and permissions.
 	// Studio then signs the user in and asks bkn-safe what they may do.
 	Safe bool
+	// Shown are navigation keys to show although mini hides them, for a
+	// build that also runs their services (an Enterprise mini runs BKN
+	// project and Trace, for example).
+	Shown []string
 }
 
 // Start serves the gateway on addr in a goroutine.
@@ -105,9 +126,9 @@ func Start(addr string, routes []Route, opts Options) {
 		target := &url.URL{Scheme: "http", Host: r.Upstream}
 		proxy := httputil.NewSingleHostReverseProxy(target)
 		proxy.FlushInterval = -1 // stream SSE / MCP responses immediately
-		if r.Prefix == "/api/ontology-manager/" {
+		if strings.HasPrefix(r.Prefix, legacyBKN) {
 			mux.Handle(r.Prefix, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				req.URL.Path = "/api/bkn-backend/" + strings.TrimPrefix(req.URL.Path, r.Prefix)
+				req.URL.Path = "/api/bkn-backend/" + strings.TrimPrefix(req.URL.Path, legacyBKN)
 				req.URL.RawPath = ""
 				proxy.ServeHTTP(w, req)
 			}))

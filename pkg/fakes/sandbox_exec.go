@@ -57,7 +57,7 @@ func (s *sandbox) uploadFile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		target := filepath.Join(root, name)
-		if err := writeFile(target, data, overwrite); err != nil && !os.IsExist(err) {
+		if err := s.writeFile(target, data, overwrite); err != nil && !os.IsExist(err) {
 			writeJSON(w, http.StatusInternalServerError, map[string]any{"detail": err.Error()})
 			return
 		}
@@ -114,7 +114,7 @@ func (s *sandbox) uploadFile(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"detail": err.Error()})
 			return
 		}
-		switch err := writeFile(filepath.Join(root, filepath.FromSlash(name)), content, overwrite); {
+		switch err := s.writeFile(filepath.Join(root, filepath.FromSlash(name)), content, overwrite); {
 		case err == nil:
 			extracted++
 		case os.IsExist(err):
@@ -138,8 +138,9 @@ func joinRel(dir, name string) string {
 }
 
 // writeFile writes data at path; with overwrite false an existing file is
-// left alone and os.ErrExist is returned.
-func writeFile(path string, data []byte, overwrite bool) error {
+// left alone and os.ErrExist is returned. What it writes goes to the
+// workspace's owner (see handOver).
+func (s *sandbox) writeFile(path string, data []byte, overwrite bool) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -155,7 +156,39 @@ func writeFile(path string, data []byte, overwrite bool) error {
 		f.Close()
 		return err
 	}
-	return f.Close()
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return s.handOver(path)
+}
+
+// How handOver reads and changes file owners; tests replace them.
+var (
+	euid    = os.Geteuid
+	ownerOf = fileOwner
+	chown   = os.Lchown
+)
+
+// handOver gives path, and the directories above it up to the workspace, to
+// the user who owns the workspace. An executor in a container of its own runs
+// as that user, and Function and Skill code writes next to the files it is
+// given. Only root can give files away: run as any other user, mini leaves
+// them as they are.
+func (s *sandbox) handOver(path string) error {
+	if euid() != 0 {
+		return nil
+	}
+	uid, gid, ok := ownerOf(s.cfg.Workspace)
+	if !ok || (uid == 0 && gid == 0) {
+		return nil
+	}
+	root := filepath.Clean(s.cfg.Workspace) + string(filepath.Separator)
+	for p := filepath.Clean(path); strings.HasPrefix(p, root); p = filepath.Dir(p) {
+		if err := chown(p, uid, gid); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func executionID() string {

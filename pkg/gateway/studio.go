@@ -3,6 +3,7 @@ package gateway
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 )
 
 // Navigation studio leaves out in every mini: services mini does not run (BKN
@@ -104,6 +105,9 @@ func studioConfigJS(opts Options) string {
 		rt.HiddenNavigation = append(rt.HiddenNavigation, "functions")
 		rt.Features = map[string]any{"executionFactoryLab": map[string]any{"function": false}}
 	}
+	rt.HiddenNavigation = slices.DeleteFunc(rt.HiddenNavigation, func(key string) bool {
+		return slices.Contains(opts.Shown, key)
+	})
 	data, err := json.MarshalIndent(rt, "", "  ")
 	if err != nil {
 		panic(err) // plain data: cannot fail

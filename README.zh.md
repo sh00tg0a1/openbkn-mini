@@ -15,6 +15,8 @@
 函数和 Skill 脚本由平台自己的执行器运行，但没有社区版那样每个会话一个容器：它们共用 mini 容器里的
 一个 Python 环境，和容器之间没有隔离。镜像以平台的沙箱模板镜像为底座，所以比较大（约 1.7 GB）。
 用不到函数和 Skill 脚本的话，可以不装沙箱，见下文。
+设置 `MINI_EXECUTOR=external`（再配上 `MINI_EXECUTOR_URL` 和 `MINI_SANDBOX_ADDR`）可以把执行器放到单独的
+容器里；这里的 compose 文件没有这样配置。
 
 ## 启动
 
@@ -97,10 +99,10 @@ docker compose restart mini
 | 路径 | 内容 |
 |---|---|
 | `cmd/mini` | 入口：依次启动替身、5 个服务、网关 |
-| `internal/safe` | `MINI_SAFE=on` 时用：bkn-safe 的配置与数据库、Hydra 进程、OAuth 客户端 |
-| `internal/gateway` | 统一入口 8000：转发到各服务，托管 studio，生成 config.js |
-| `internal/fakes` | 替身：bkn-safe、Hydra、模型工厂、Trace、沙箱控制面（后面接函数执行器）、OSS、NSQ |
-| `internal/forward` | 容器里把 127.0.0.1 上的数据库、OpenSearch 端口转到 compose 服务 |
+| `pkg/safe` | `MINI_SAFE=on` 时用：bkn-safe 的配置与数据库、Hydra 进程、OAuth 客户端 |
+| `pkg/gateway` | 统一入口 8000：只转发各服务的公开接口（与平台 ingress 开放的一致，内部接口不对外），托管 studio，生成 config.js |
+| `pkg/fakes` | 替身：bkn-safe、Hydra、模型工厂、Trace、沙箱控制面（后面接函数执行器）、OSS、NSQ |
+| `pkg/forward` | 容器里把 127.0.0.1 上的数据库、OpenSearch 端口转到 compose 服务 |
 | `docker/` | 镜像、启动脚本、迁移工具的连接配置 |
 | `dev/` | 在本机直接跑 mini 用：依赖服务的 compose 文件和运行目录（配置） |
 | `scripts/smoke.sh` | 对运行中的 mini 做冒烟测试：数据源、建网、查询、Cypher、MCP、函数、Skill |
