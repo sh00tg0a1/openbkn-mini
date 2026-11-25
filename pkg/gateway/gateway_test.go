@@ -70,3 +70,55 @@ func TestRoutesWithSafeOpenOnlyWhatThePlatformOpens(t *testing.T) {
 		}
 	}
 }
+
+func TestRoutesOpenOnlyTheServicesPublicAPIs(t *testing.T) {
+	for _, safe := range []bool{false, true} {
+		routes := Routes(safe)
+		for path, want := range map[string]string{
+			"/api/bkn-backend/v1/knowledge-networks":        "127.0.0.1:13015",
+			"/api/bkn-backend/v2/knowledge-networks":        "127.0.0.1:13015",
+			"/api/ontology-manager/v1/knowledge-networks":   "127.0.0.1:13015",
+			"/api/ontology-query/v1/knowledge-networks/k/x": "127.0.0.1:13018",
+			"/api/vega-backend/v1/catalogs":                 "127.0.0.1:13014",
+			"/api/agent-retrieval/v1/mcp/":                  "127.0.0.1:30779",
+			"/api/agent-retrieval/v1":                       "127.0.0.1:30779",
+			"/api/agent-operator-integration/v1/skills":     "127.0.0.1:9000",
+			"/api/capabilities-lab/v1/x":                    "127.0.0.1:9000",
+			"/api/mf-model-manager/v1/llm/list":             "127.0.0.1:9898",
+			"/api/mf-model-api/v1/chat/completions":         "127.0.0.1:9898",
+			"/mini-oss/blob/mini-local/k":                   "127.0.0.1:8095",
+		} {
+			if got := upstreamFor(routes, path); got != want {
+				t.Errorf("safe=%v: %s goes to %q, want %q", safe, path, got, want)
+			}
+		}
+		// Internal routes trust identity headers instead of a token: the
+		// platform's ingress does not open them, nor does mini.
+		for _, path := range []string{
+			"/api/bkn-backend/in/v1/knowledge-networks",
+			"/api/vega-backend/in/v1/catalogs",
+			"/api/ontology-query/in/v1/knowledge-networks/k/x",
+			"/api/agent-retrieval/in/v1/kn/search",
+			"/api/agent-operator-integration/internal-v1/skills/s",
+			"/api/ontology-manager/in/v1/knowledge-networks",
+			"/api/bkn-backend/v1/../in/v1/knowledge-networks",
+			"/api/bkn-backend/v1x",
+		} {
+			if got := upstreamFor(routes, path); got != "" {
+				t.Errorf("safe=%v: %s is reachable through the gateway (%s)", safe, path, got)
+			}
+		}
+	}
+}
+
+func TestPublicOpensEachPathAndWhatIsUnderIt(t *testing.T) {
+	routes := Public("u:1", "/api/x/v1", "/api/x/v2")
+	for path, want := range map[string]string{
+		"/api/x/v1": "u:1", "/api/x/v1/a/b": "u:1", "/api/x/v2/a": "u:1",
+		"/api/x/v3": "", "/api/x/in/v1/a": "", "/api/x/v10": "",
+	} {
+		if got := upstreamFor(routes, path); got != want {
+			t.Errorf("%s goes to %q, want %q", path, got, want)
+		}
+	}
+}

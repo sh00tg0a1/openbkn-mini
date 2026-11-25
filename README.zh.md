@@ -100,7 +100,7 @@ docker compose restart mini
 |---|---|
 | `cmd/mini` | 入口：依次启动替身、5 个服务、网关 |
 | `pkg/safe` | `MINI_SAFE=on` 时用：bkn-safe 的配置与数据库、Hydra 进程、OAuth 客户端 |
-| `pkg/gateway` | 统一入口 8000：转发到各服务，托管 studio，生成 config.js |
+| `pkg/gateway` | 统一入口 8000：只转发各服务的公开接口（与平台 ingress 开放的一致，内部接口不对外），托管 studio，生成 config.js |
 | `pkg/fakes` | 替身：bkn-safe、Hydra、模型工厂、Trace、沙箱控制面（后面接函数执行器）、OSS、NSQ |
 | `pkg/forward` | 容器里把 127.0.0.1 上的数据库、OpenSearch 端口转到 compose 服务 |
 | `docker/` | 镜像、启动脚本、迁移工具的连接配置 |

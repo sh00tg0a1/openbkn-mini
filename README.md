@@ -113,7 +113,7 @@ knowledge network concepts.
 |---|---|
 | `cmd/mini` | Entry point: stand-ins, then the five services, then the gateway |
 | `pkg/safe` | For `MINI_SAFE=on`: bkn-safe's settings and database, the Hydra process, the OAuth clients |
-| `pkg/gateway` | The single entry on port 8000: routes to the services, serves studio, writes config.js |
+| `pkg/gateway` | The single entry on port 8000: routes the services' public APIs (what the platform's ingress opens; their internal routes stay inside), serves studio, writes config.js |
 | `pkg/fakes` | Stand-ins: bkn-safe, Hydra, model factory, Trace, the sandbox control plane (in front of the function executor), OSS, NSQ |
 | `pkg/forward` | In the container, relays the 127.0.0.1 database and OpenSearch ports to the compose services |
 | `docker/` | Image, entry script and the migration tool's connection settings |
