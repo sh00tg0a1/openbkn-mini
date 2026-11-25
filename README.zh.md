@@ -15,6 +15,8 @@
 函数和 Skill 脚本由平台自己的执行器运行，但没有社区版那样每个会话一个容器：它们共用 mini 容器里的
 一个 Python 环境，和容器之间没有隔离。镜像以平台的沙箱模板镜像为底座，所以比较大（约 1.7 GB）。
 用不到函数和 Skill 脚本的话，可以不装沙箱，见下文。
+设置 `MINI_EXECUTOR=external`（再配上 `MINI_EXECUTOR_URL` 和 `MINI_SANDBOX_ADDR`）可以把执行器放到单独的
+容器里；这里的 compose 文件没有这样配置。
 
 ## 启动
 

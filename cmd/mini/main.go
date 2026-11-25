@@ -38,9 +38,13 @@ const (
 	modelAddr       = "127.0.0.1:9898"
 	nsqAddr         = "127.0.0.1:4151"
 	traceAddr       = "127.0.0.1:8081"
-	sandboxAddr     = "127.0.0.1:8090"
 	ossAddr         = "127.0.0.1:8095"
 )
+
+// The sandbox stand-in takes the executor's callbacks. An executor in a
+// container of its own (MINI_EXECUTOR=external, see docker/entrypoint.sh)
+// needs it on an address that container reaches.
+var sandboxAddr = env("MINI_SANDBOX_ADDR", "127.0.0.1:8090")
 
 // Where the platform services listen, as their configs say.
 var (
@@ -246,8 +250,8 @@ func insideListeners() map[string]string {
 		inside[hydraAddr] = "Hydra (admin)"
 		inside[hydraPublicAddr] = "Hydra (public)"
 	}
-	if u, err := url.Parse(os.Getenv("MINI_EXECUTOR_URL")); err == nil && u.Host != "" {
-		inside[u.Host] = "the function executor"
+	if host, ok := localExecutor(os.Getenv("MINI_EXECUTOR_URL")); ok {
+		inside[host] = "the function executor"
 	}
 	for _, pair := range strings.Split(os.Getenv("MINI_FORWARD"), ",") {
 		if listen, target, ok := strings.Cut(pair, "="); ok {
@@ -255,6 +259,21 @@ func insideListeners() map[string]string {
 		}
 	}
 	return inside
+}
+
+// localExecutor returns the address of an executor that listens inside mini,
+// at a loopback address. One in a container of its own takes no port here.
+func localExecutor(raw string) (string, bool) {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return "", false
+	}
+	if h := u.Hostname(); h != "localhost" {
+		if ip := net.ParseIP(h); ip == nil || !ip.IsLoopback() {
+			return "", false
+		}
+	}
+	return u.Host, true
 }
 
 // checkGatewayPort refuses a gateway port another part of mini listens on.

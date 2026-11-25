@@ -36,6 +36,29 @@ func TestInsideListenersIncludeExecutorAndForwards(t *testing.T) {
 	}
 }
 
+func TestInsideListenersLeaveOutAnExecutorElsewhere(t *testing.T) {
+	t.Setenv("MINI_EXECUTOR_URL", "http://sandbox-gate:8080")
+	inside := insideListeners()
+	if _, taken := inside["sandbox-gate:8080"]; taken {
+		t.Error("an executor in another container reserved a port inside mini")
+	}
+	if err := checkGatewayPort("0.0.0.0:8080", inside); err != nil {
+		t.Errorf("gateway refused the port of an executor elsewhere: %v", err)
+	}
+	for raw, want := range map[string]string{
+		"http://127.0.0.1:8080": "127.0.0.1:8080",
+		"http://localhost:8080": "localhost:8080",
+		"http://[::1]:8080":     "[::1]:8080",
+		"http://10.0.0.5:8080":  "",
+		"http://sandbox:8080":   "",
+		"":                      "",
+	} {
+		if got, _ := localExecutor(raw); got != want {
+			t.Errorf("localExecutor(%q) = %q, want %q", raw, got, want)
+		}
+	}
+}
+
 func TestSafeOnReadsTheSwitch(t *testing.T) {
 	for value, want := range map[string]bool{"": false, "off": false, "no": false, "on": true, "ON": true, " true ": true, "1": true} {
 		t.Setenv("MINI_SAFE", value)

@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -233,6 +234,72 @@ func TestSandboxUploadExtractsIntoTheSessionWorkspace(t *testing.T) {
 	}
 	if code, _ := uploadZip(t, url, map[string]string{"../escape.txt": "x"}); code != 400 {
 		t.Fatalf("path traversal entry = %d, want 400", code)
+	}
+}
+
+// stubOwnership runs mini as user asRoot says, with the workspace owned by
+// 1000:1000, and returns the chown calls, by path relative to the workspace.
+func stubOwnership(t *testing.T, workspace string, asRoot bool) *map[string]string {
+	t.Helper()
+	oldEuid, oldOwnerOf, oldChown := euid, ownerOf, chown
+	t.Cleanup(func() { euid, ownerOf, chown = oldEuid, oldOwnerOf, oldChown })
+	euid = func() int {
+		if asRoot {
+			return 0
+		}
+		return 501
+	}
+	ownerOf = func(path string) (int, int, bool) {
+		if path != workspace {
+			t.Errorf("owner asked of %s, want the workspace", path)
+		}
+		return 1000, 1000, true
+	}
+	calls := map[string]string{}
+	chown = func(path string, uid, gid int) error {
+		rel, err := filepath.Rel(workspace, path)
+		if err != nil || strings.HasPrefix(rel, "..") || rel == "." {
+			t.Errorf("chown outside the workspace: %s", path)
+		}
+		calls[filepath.ToSlash(rel)] = fmt.Sprintf("%d:%d", uid, gid)
+		return nil
+	}
+	return &calls
+}
+
+func TestSandboxUploadGoesToTheWorkspaceOwner(t *testing.T) {
+	cp, _, workspace := newTestSandbox(t)
+	calls := stubOwnership(t, workspace, true)
+	do(t, "POST", cp.URL+"/api/v1/sessions", map[string]any{"id": "s", "timeout": 60})
+	url := cp.URL + "/api/v1/sessions/s/files/upload?path=skills/k1&extract=true&overwrite=false"
+	if code, out := uploadZip(t, url, map[string]string{"SKILL.md": "# k1", "scripts/run.py": "print(1)"}); code != 200 {
+		t.Fatalf("upload = %d %v", code, out)
+	}
+	for _, rel := range []string{"sessions", "sessions/s", "sessions/s/skills", "sessions/s/skills/k1",
+		"sessions/s/skills/k1/SKILL.md", "sessions/s/skills/k1/scripts", "sessions/s/skills/k1/scripts/run.py"} {
+		if got := (*calls)[rel]; got != "1000:1000" {
+			t.Errorf("%s owned by %q, want 1000:1000", rel, got)
+		}
+	}
+	// A file kept by overwrite=false is not touched again.
+	*calls = map[string]string{}
+	if _, out := uploadZip(t, url, map[string]string{"SKILL.md": "# changed"}); out["skipped_file_count"] != float64(1) {
+		t.Fatalf("re-upload = %v", out)
+	}
+	if len(*calls) != 0 {
+		t.Errorf("kept file handed over again: %v", *calls)
+	}
+}
+
+func TestSandboxUploadKeepsOwnersWhenNotRoot(t *testing.T) {
+	cp, _, workspace := newTestSandbox(t)
+	calls := stubOwnership(t, workspace, false)
+	do(t, "POST", cp.URL+"/api/v1/sessions", map[string]any{"id": "s", "timeout": 60})
+	if code, out := uploadZip(t, cp.URL+"/api/v1/sessions/s/files/upload?extract=true", map[string]string{"a.txt": "x"}); code != 200 {
+		t.Fatalf("upload = %d %v", code, out)
+	}
+	if len(*calls) != 0 {
+		t.Errorf("chown as a user other than root: %v", *calls)
 	}
 }
 

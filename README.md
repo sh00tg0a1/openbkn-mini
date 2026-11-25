@@ -20,6 +20,8 @@ Functions and Skill scripts run in the platform's own executor, but without the 
 edition's per-session containers: they share one Python environment in the mini container and are
 not isolated from it. The image is built on the platform's sandbox template image, so it is large
 (about 1.7 GB). If you do not need Functions or Skill scripts, leave the sandbox out (below).
+`MINI_EXECUTOR=external` (with `MINI_EXECUTOR_URL` and `MINI_SANDBOX_ADDR`) runs the executor in a
+container of its own instead; the compose file here does not set that up.
 
 ## Start
 
